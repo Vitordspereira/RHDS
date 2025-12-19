@@ -2,86 +2,108 @@ package com.hub.hds.service.experiencia;
 
 import com.hub.hds.dto.experiencia.ExperienciaRequest;
 import com.hub.hds.dto.experiencia.ExperienciaResponse;
+import com.hub.hds.models.candidato.Candidato;
 import com.hub.hds.models.experiencia.Experiencia;
-import com.hub.hds.repository.experiencia.ExperienciaRepository;
+import com.hub.hds.repository.candidato.CandidatoRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 @Service
+@Transactional
 public class ExperienciaService {
 
-    private final ExperienciaRepository experienciaRepository;
+    private final CandidatoRepository candidatoRepository;
 
-    public ExperienciaService(ExperienciaRepository experienciaRepository) {
-        this.experienciaRepository = experienciaRepository;
+    public ExperienciaService(CandidatoRepository candidatoRepository) {
+        this.candidatoRepository = candidatoRepository;
     }
 
-    //CRIAR
-    public ExperienciaResponse criar(ExperienciaRequest request){
+    // ✅ POST — cria experiência para um candidato
+    public ExperienciaResponse criar(ExperienciaRequest request) {
+
+        Candidato candidato = candidatoRepository.findById(request.idCandidato())
+                .orElseThrow(() -> new RuntimeException("Candidato não encontrado"));
 
         Experiencia experiencia = Experiencia.builder()
-                .nome_empresa(request.nome_empresa())
+                .nomeEmpresa(request.nomeEmpresa())
                 .funcao(request.funcao())
                 .descricao(request.descricao())
-                .outras_experiencias(request.outras_experiencias())
+                .outrasExperiencias(request.outrasExperiencias())
                 .habilidades(request.habilidades())
-                .periodo_inicio(request.periodo_inicio())
-                .periodo_fim(request.periodo_fim())
+                .periodoInicio(request.periodoInicio())
+                .periodoFim(request.periodoFim())
                 .build();
 
-        Experiencia salva = experienciaRepository.save(experiencia);
+        candidato.adicionarExperiencia(experiencia);
 
-        return mapToResponse(salva);
+        candidatoRepository.save(candidato);
+
+        return mapToResponse(experiencia);
     }
 
-    //LISTAR TODOS
-    public List<ExperienciaResponse> listar(){
-        return experienciaRepository.findAll()
+    // GET — lista experiências de um candidato
+    public List<ExperienciaResponse> listarPorCandidato(Long idCandidato) {
+
+        Candidato candidato = candidatoRepository.findById(idCandidato)
+                .orElseThrow(() -> new RuntimeException("Candidato não encontrado"));
+
+        return candidato.getExperiencias()
                 .stream()
                 .map(this::mapToResponse)
                 .toList();
     }
 
-    //BUSCAR POR ID
-    public ExperienciaResponse buscarPorId(Long id){
-        Experiencia experiencia = experienciaRepository.findById(id)
-                .orElseThrow(()-> new RuntimeException("Experiência não encontrada"));
+    // PUT — atualiza experiência do candidato
+    public ExperienciaResponse atualizar(
+            Long idCandidato,
+            Long idExperiencia,
+            ExperienciaRequest request
+    ) {
+
+        Candidato candidato = candidatoRepository.findById(idCandidato)
+                .orElseThrow(() -> new RuntimeException("Candidato não encontrado"));
+
+        Experiencia experiencia = candidato.getExperiencias()
+                .stream()
+                .filter(e -> e.getIdExperiencia().equals(idExperiencia))
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("Experiência não encontrada"));
+
+        experiencia.setNomeEmpresa(request.nomeEmpresa());
+        experiencia.setFuncao(request.funcao());
+        experiencia.setDescricao(request.descricao());
+        experiencia.setOutrasExperiencias(request.outrasExperiencias());
+        experiencia.setHabilidades(request.habilidades());
+        experiencia.setPeriodoInicio(request.periodoInicio());
+        experiencia.setPeriodoFim(request.periodoFim());
 
         return mapToResponse(experiencia);
     }
 
-    //ATUALIZAR
-    public ExperienciaResponse atualizar(Long id, ExperienciaRequest request){
-        Experiencia experiencia = experienciaRepository.findById(id)
-                .orElseThrow(()-> new RuntimeException("Experiência não encontrada"));
+    // DELETE — remove experiência do candidato
+    public void deletar(Long idCandidato, Long idExperiencia) {
 
-        experiencia.setNome_empresa(request.nome_empresa());
-        experiencia.setFuncao(request.funcao());
-        experiencia.setDescricao(request.descricao());
-        experiencia.setOutras_experiencias(request.outras_experiencias());
-        experiencia.setHabilidades(request.habilidades());
-        experiencia.setPeriodo_inicio(request.periodo_inicio());
-        experiencia.setPeriodo_fim(request.periodo_fim());
+        Candidato candidato = candidatoRepository.findById(idCandidato)
+                .orElseThrow(() -> new RuntimeException("Candidato não encontrado"));
 
-        Experiencia atualizada = experienciaRepository.save(experiencia);
-        return mapToResponse(atualizada);
+        candidato.getExperiencias()
+                .removeIf(e -> e.getIdExperiencia().equals(idExperiencia));
+
+        candidatoRepository.save(candidato);
     }
 
-    //DELETAR
-    public void deletar(Long id) {experienciaRepository.deleteById(id);}
-
-    //MapToResponse
-    private ExperienciaResponse mapToResponse(Experiencia experiencia){
+    private ExperienciaResponse mapToResponse(Experiencia experiencia) {
         return new ExperienciaResponse(
-                experiencia.getId_experiencia(),
-                experiencia.getNome_empresa(),
+                experiencia.getIdExperiencia(),
+                experiencia.getNomeEmpresa(),
                 experiencia.getFuncao(),
                 experiencia.getDescricao(),
-                experiencia.getOutras_experiencias(),
+                experiencia.getOutrasExperiencias(),
                 experiencia.getHabilidades(),
-                experiencia.getPeriodo_inicio(),
-                experiencia.getPeriodo_fim()
+                experiencia.getPeriodoInicio(),
+                experiencia.getPeriodoFim()
         );
     }
 }

@@ -1,16 +1,21 @@
 package com.hub.hds.dto.candidato;
 
+import com.hub.hds.dto.experiencia.ExperienciaResponse;
+import com.hub.hds.dto.formacao.FormacaoResponse;
 import com.hub.hds.models.candidato.Genero;
 
+import java.util.List;
+
 public record CandidatoResponse(
-        Long id_candidato,
-        String nome_completo,
+        Long idCandidato,
+        String nomeCompleto,
         String email,
         String telefone,
         String cpf,
         Genero genero,
-        java.time.LocalDate data_nascimento,
+        java.time.LocalDate dataNascimento,
         String cidade,
-        String estado
+        String estado,
+        List<ExperienciaResponse> experiencias
 ) {
 }

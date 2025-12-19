@@ -1,12 +1,12 @@
 package com.hub.hds.dto.experiencia;
 
 public record ExperienciaResponse(
-        Long id_experiencia,
-        String nome_empresa,
+        Long idExperiencia,
+        String nomeEmpresa,
         String funcao,
         String descricao,
-        String outras_experiencias,
+        String outrasExperiencias,
         String habilidades,
-        String periodo_inicio,
-        String periodo_fim
+        String periodoInicio,
+        String periodoFim
 ) {}

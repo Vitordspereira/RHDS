@@ -3,6 +3,7 @@ package com.hub.hds.service.formacao;
 import com.hub.hds.dto.formacao.FormacaoRequest;
 import com.hub.hds.dto.formacao.FormacaoResponse;
 import com.hub.hds.models.formacao.Formacao;
+import com.hub.hds.repository.candidato.CandidatoRepository;
 import com.hub.hds.repository.formacao.FormacaoRepository;
 import org.springframework.stereotype.Service;
 
@@ -13,11 +14,15 @@ import static org.springframework.data.jpa.domain.AbstractPersistable_.id;
 
 @Service
 public class FormacaoService {
-    private final FormacaoRepository formacaoRepository;
 
-    public FormacaoService(FormacaoRepository formacaoRepository) {
+    private final FormacaoRepository formacaoRepository;
+    private final CandidatoRepository candidatoRepository;
+
+    public FormacaoService(FormacaoRepository formacaoRepository, CandidatoRepository candidatoRepository) {
 
         this.formacaoRepository = formacaoRepository;
+        this.candidatoRepository = candidatoRepository;
+
     }
 
     //CRIAR

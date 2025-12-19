@@ -1,12 +1,12 @@
 package com.hub.hds.service.senha;
 
 
-import com.hub.hds.dto.senha.ResetSenhaRequest;
 import com.hub.hds.dto.senha.ResetSenhaResponse;
 import com.hub.hds.models.candidato.Candidato;
 import com.hub.hds.models.senha.ResetSenha;
 import com.hub.hds.repository.candidato.CandidatoRepository;
 import com.hub.hds.repository.senha.ResetSenhaRepository;
+import com.hub.hds.service.EmailService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -18,59 +18,65 @@ public class ResetSenhaService {
 
     private final CandidatoRepository candidatoRepository;
     private final ResetSenhaRepository resetSenhaRepository;
+    private final EmailService emailService;
     private final PasswordEncoder passwordEncoder;
 
     public ResetSenhaService(
             CandidatoRepository candidatoRepository,
             ResetSenhaRepository resetSenhaRepository,
+            EmailService emailService,
             PasswordEncoder passwordEncoder
     ) {
         this.candidatoRepository = candidatoRepository;
         this.resetSenhaRepository = resetSenhaRepository;
+        this.emailService = emailService;
         this.passwordEncoder = passwordEncoder;
     }
 
-    public String solicitarReset(ResetSenhaRequest request) {
-
-        Candidato candidato = candidatoRepository
-                .findByEmail(request.email())
-                .orElseThrow(() -> new RuntimeException("E-mail não encontrado"));
+    public void solicitarReset(String email) {
+        Candidato candidato = candidatoRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Candidato não encontrado"));
 
         String token = UUID.randomUUID().toString();
 
-        ResetSenha reset = ResetSenha.builder()
-                .candidato(candidato)
-                .token(token)
-                .expira_em(LocalDateTime.now().plusMinutes(10))
-                .utilizado(false)
-                .build();
+        ResetSenha reset = new ResetSenha();
+        reset.setCandidato(candidato);
+        reset.setToken(token);
+        reset.setExpiraEm(LocalDateTime.now().plusMinutes(30));
+        reset.setUtilizado(false);
 
         resetSenhaRepository.save(reset);
 
-        return token;
+        String link = "http://localhost:3000/resetar-senha?token=" + token;
+
+        emailService.enviarEmail(
+                candidato.getEmail(),
+                "Reset de senha",
+                "Clique no link para redefinir sua senha:\n" + link
+        );
     }
 
-    public String confirmarReset(ResetSenhaResponse request) {
-
-        ResetSenha reset = resetSenhaRepository.findByToken(request.token())
+    public void redefinirSenha(ResetSenhaResponse dto) {
+        ResetSenha reset = resetSenhaRepository.findByToken(dto.token())
                 .orElseThrow(() -> new RuntimeException("Token inválido"));
 
-        if (reset.isUtilizado())
-            throw new RuntimeException("Token já foi utilizado");
+        if (reset.isUtilizado()) {
+            throw new RuntimeException("Token já utilizado");
+        }
 
-        if (reset.getExpira_em().isBefore(LocalDateTime.now()))
+        if (reset.getExpiraEm().isBefore(LocalDateTime.now())) {
             throw new RuntimeException("Token expirado");
+        }
 
-        // Atualiza senha
         Candidato candidato = reset.getCandidato();
-        candidato.setSenha(passwordEncoder.encode(request.novaSenha()));
+        candidato.setSenha(passwordEncoder.encode(dto.novaSenha()));
         candidatoRepository.save(candidato);
 
-        // Marca token como utilizado
         reset.setUtilizado(true);
         resetSenhaRepository.save(reset);
-
-        return "Senha atualizada com sucesso";
     }
 }
+
+
+
 

@@ -36,7 +36,7 @@ public class ExperienciaController {
 
     @PutMapping("/{id}")
     public ExperienciaResponse atualizar(@PathVariable Long id, @RequestBody ExperienciaRequest request){
-        return experienciaService.atualizar(id, request);
+        return experienciaService.atualizar(id);
     }
 
     @DeleteMapping("/{id}")

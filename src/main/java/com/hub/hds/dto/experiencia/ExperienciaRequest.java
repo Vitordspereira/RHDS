@@ -4,16 +4,17 @@ import jakarta.validation.constraints.NotBlank;
 
 public record ExperienciaRequest(
 
+        Long idCandidato,
+
         @NotBlank(message = "O nome da empresa é obrigatório.")
-        String nome_empresa,
+        String nomeEmpresa,
 
         @NotBlank(message = "A função exercida é obrigatória.")
         String funcao,
 
         String descricao,
-        String outras_experiencias,
+        String outrasExperiencias,
         String habilidades,
-        String periodo_inicio,
-        String periodo_fim
-
+        String periodoInicio,
+        String periodoFim
 ) {}

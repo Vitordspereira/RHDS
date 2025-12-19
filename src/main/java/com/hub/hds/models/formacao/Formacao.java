@@ -1,5 +1,7 @@
 package com.hub.hds.models.formacao;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.hub.hds.models.candidato.Candidato;
 import jakarta.persistence.*;
 import lombok.*;
 

@@ -1,12 +1,12 @@
 package com.hub.hds.models.candidato;
 
-import com.fasterxml.jackson.annotation.JsonManagedReference;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.hub.hds.models.experiencia.Experiencia;
-import com.hub.hds.models.formacao.Formacao;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -20,15 +20,17 @@ public class Candidato {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id_candidato;
+    @Column(name = "id_candidato")
+    private Long idCandidato;
 
-    @Column(nullable = false, length = 150)
-    private String nome_completo;
+    @Column(name = "nome_completo", nullable = false, length = 150)
+    private String nomeCompleto;
 
     @Column(nullable = false, length = 150, unique = true)
     private String email;
 
     @Column(nullable = false, length = 10)
+    @JsonIgnore
     private String senha;
 
     @Column(nullable = false, length = 14)
@@ -40,7 +42,7 @@ public class Candidato {
     @Enumerated(EnumType.STRING)
     private Genero genero;
 
-    private LocalDate data_nascimento;
+    private LocalDate dataNascimento;
 
     @Column(length = 100)
     private String cidade;
@@ -48,13 +50,11 @@ public class Candidato {
     @Column(length = 2)
     private String estado;
 
-    @OneToMany(mappedBy = "candidatos", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    @JsonManagedReference
-    private List<Formacao> formacaos;
+    @OneToMany(mappedBy = "candidato", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Experiencia> experiencias = new ArrayList<>();
 
-    @OneToMany(mappedBy = "candidatos", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    @JsonManagedReference
-    private List<Experiencia> experiencias;
-
-
+    public void adicionarExperiencia(Experiencia experiencia) {
+        experiencias.add(experiencia);
+        experiencia.setCandidato(this);
+    }
 }

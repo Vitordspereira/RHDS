@@ -17,19 +17,23 @@ public class ResetSenha {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id_token;
+    @Column(name = "id_token")
+    private Long idToken;
 
     @ManyToOne
     @JoinColumn(name = "id_candidato", nullable = false)
     private Candidato candidato;
 
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false, unique = true, length = 100)
     private String token;
 
-    @Column(nullable = false)
-    private LocalDateTime expira_em;
+    @Column(name = "criado_em")
+    private LocalDateTime criadoEm = LocalDateTime.now();
+
+    @Column(name = "expira_em",nullable = false)
+    private LocalDateTime expiraEm;
 
     @Column(nullable = false)
-    private boolean utilizado;
+    private boolean utilizado = false;
 }

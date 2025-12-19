@@ -1,6 +1,6 @@
 package com.hub.hds.models.experiencia;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.hub.hds.models.candidato.Candidato;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -15,10 +15,11 @@ public class Experiencia {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id_experiencia;
+    @Column(name = "id_experiencia")
+    private Long idExperiencia;
 
-    @Column(nullable = false, length = 150)
-    private String nome_empresa;
+    @Column(name = "nome_empresa",nullable = false, length = 150)
+    private String nomeEmpresa;
 
     @Column(nullable = false, length = 150)
     private String funcao;
@@ -26,22 +27,21 @@ public class Experiencia {
     @Column(columnDefinition = "TEXT")
     private String descricao;
 
-    @Column(columnDefinition = "TEXT")
-    private String outras_experiencias;
+    @Column(name = "outras_experiencias",columnDefinition = "TEXT")
+    private String outrasExperiencias;
 
     @Column(columnDefinition = "TEXT")
     private String habilidades;
 
     @Column(length = 7)
-    private String periodo_inicio;
+    private String periodoInicio;
 
     @Column(length = 7)
-    private String periodo_fim;
+    private String periodoFim;
 
-    @ManyToOne
-    @JoinColumn(name = "id_candidato")
-    @JsonBackReference
-     
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_candidato", nullable = false)
+    private Candidato candidato;
 }
 
 

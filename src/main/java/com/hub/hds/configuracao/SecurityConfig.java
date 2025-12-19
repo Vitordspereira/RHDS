@@ -44,6 +44,12 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.DELETE, "/formacoes/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/formacoes/**").permitAll()
 
+                        //RESET SENHA
+                        .requestMatchers("/senha/esqueci-senha").permitAll()
+                        .requestMatchers("/senha/resetar").permitAll()
+                        .requestMatchers("/teste-email").permitAll()
+
+
                         // ROTAS PROTEGIDAS
                         .requestMatchers("/auth/empresa/**").hasAuthority("ROLE_EMPRESA")
                         .requestMatchers("/auth/login/**").hasAuthority("ROLE_CANDIDATO")
