@@ -1,25 +1,27 @@
 package com.hub.hds.controller.empresa;
 
-import com.hub.hds.dto.empresa.EmpresaRequest;
-import com.hub.hds.dto.empresa.EmpresaResponse;
-import com.hub.hds.service.empresa.EmpresaService;
+import com.hub.hds.dto.empresaRecrutador.EmpresaRecrutadorRequest;
+import com.hub.hds.service.empresaRecrutador.EmpresaRecrutadorService;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 
-@CrossOrigin(origins = "*")
 @RestController
-@RequestMapping("/empresas")
-@RequiredArgsConstructor
+@RequestMapping("/empresa")
+@CrossOrigin(origins = "*")
 public class EmpresaController {
 
-    private final EmpresaService empresaService;
+    private final EmpresaRecrutadorService service;
 
-    @PostMapping
-    public ResponseEntity<EmpresaResponse> cadastrar(
-            @RequestBody @Valid EmpresaRequest request){
+    public EmpresaController(EmpresaRecrutadorService service) {
+        this.service = service;
+    }
 
-        return ResponseEntity.ok(empresaService.cadastrar(request));
+    @PostMapping("/cadastro")
+    public ResponseEntity<Void> cadastrar(
+            @RequestBody @Valid EmpresaRecrutadorRequest request
+    ) {
+        service.cadastrar(request);
+        return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 }

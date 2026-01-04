@@ -1,5 +1,6 @@
 package com.hub.hds.models.experiencia;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.hub.hds.models.candidato.Candidato;
 import jakarta.persistence.*;
 import lombok.*;
@@ -40,7 +41,7 @@ public class Experiencia {
     private String periodoFim;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "id_candidato", nullable = false)
+    @JoinColumn(name = "id_candidato")
     private Candidato candidato;
 }
 

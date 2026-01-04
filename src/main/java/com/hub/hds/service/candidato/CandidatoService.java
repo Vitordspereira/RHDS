@@ -1,12 +1,17 @@
 package com.hub.hds.service.candidato;
 
-import com.hub.hds.dto.candidato.CandidatoRequest;
+import com.hub.hds.dto.candidato.CandidatoCadastroDTO;
 import com.hub.hds.dto.candidato.CandidatoResponse;
+import com.hub.hds.dto.candidato.CandidatoCompletoResponse;
+import com.hub.hds.dto.candidato.CandidatoUpdateDTO;
 import com.hub.hds.dto.experiencia.ExperienciaResponse;
+import com.hub.hds.dto.formacao.FormacaoResponse;
 import com.hub.hds.models.candidato.Candidato;
+import com.hub.hds.models.usuario.Role;
+import com.hub.hds.models.usuario.Usuario;
 import com.hub.hds.repository.candidato.CandidatoRepository;
+import com.hub.hds.service.usuario.UsuarioService;
 import jakarta.transaction.Transactional;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -16,49 +21,77 @@ import java.util.List;
 public class CandidatoService {
 
     private final CandidatoRepository candidatoRepository;
-    private final PasswordEncoder passwordEncoder;
+    private final UsuarioService usuarioService;
 
     public CandidatoService(
             CandidatoRepository candidatoRepository,
-            PasswordEncoder passwordEncoder
+            UsuarioService usuarioService
     ) {
         this.candidatoRepository = candidatoRepository;
-        this.passwordEncoder = passwordEncoder;
+        this.usuarioService = usuarioService;
     }
 
-    //CRIAR CANDIDATO
-    public CandidatoResponse criar(CandidatoRequest request) {
+    // CADASTRO INICIAL (COM LOGIN)
+    public CandidatoResponse cadastrar(CandidatoCadastroDTO request) {
+
+        // 1️⃣ CRIA USUÁRIO (LOGIN)
+        Usuario usuario = usuarioService.criarUsuario(
+                request.email(),
+                request.senha(),
+                Role.CANDIDATO
+        );
+
+        String telefoneLimpo = request.telefone()
+                .replaceAll("\\D", "");
+
+    // CRIAR CANDIDATO
 
         Candidato candidato = Candidato.builder()
                 .nomeCompleto(request.nomeCompleto())
-                .email(request.email())
-                .senha(passwordEncoder.encode(request.senha()))
                 .telefone(request.telefone())
                 .cpf(request.cpf())
                 .genero(request.genero())
                 .dataNascimento(request.dataNascimento())
                 .cidade(request.cidade())
                 .estado(request.estado())
+                .usuario(usuario)
                 .build();
 
         candidatoRepository.save(candidato);
 
-        return mapToResponse(candidato);
+        return mapBasico(candidato);
     }
 
-    //ATUALIZAR CANDIDATO
-    public CandidatoResponse atualizar(Long id, CandidatoRequest request) {
+    // ATUALIZAR CANDIDATO
+    public CandidatoResponse atualizar(Long id, CandidatoUpdateDTO request) {
 
         Candidato candidato = candidatoRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Candidato não encontrado"));
 
-        candidato.setNomeCompleto(request.nomeCompleto());
-        candidato.setTelefone(request.telefone());
-        candidato.setCidade(request.cidade());
-        candidato.setEstado(request.estado());
-        candidato.setGenero(request.genero());
 
-        return mapToResponse(candidato);
+        if (request.nomeCompleto() != null) {
+            candidato.setNomeCompleto(request.nomeCompleto());
+        }
+
+        if (request.telefone() != null) {
+            String telefoneLimpo = request.telefone()
+                    .replaceAll("\\D", "");
+            candidato.setTelefone(telefoneLimpo);
+        }
+
+        if (request.genero() != null) {
+            candidato.setGenero(request.genero());
+        }
+
+        if (request.cidade() != null) {
+            candidato.setCidade(request.cidade());
+        }
+
+        if (request.estado() != null) {
+            candidato.setEstado(request.estado());
+        }
+
+        return mapBasico(candidato);
     }
 
     // DELETAR
@@ -66,33 +99,52 @@ public class CandidatoService {
         candidatoRepository.deleteById(id);
     }
 
-    //BUSCAR POR ID
-    public CandidatoResponse buscarCompleto(Long id) {
-
-        Candidato candidato = candidatoRepository.findComExperienciasById(id)
-                .orElseThrow(() -> new RuntimeException("Candidato não encontrado"));
-
-        return mapToResponse(candidato);
-    }
-    //LISTAR TODOS OS CANDIDATOS
+    // LISTAR TODOS
     public List<CandidatoResponse> listarTodos() {
-
         return candidatoRepository.findAll()
                 .stream()
-                .map(this::mapToResponse)
+                .map(this::mapBasico)
                 .toList();
     }
-    private CandidatoResponse mapToResponse(Candidato candidato) {
+
+    // BUSCAR CANDIDATO COMPLETO
+    public CandidatoCompletoResponse buscarCompleto(Long id) {
+
+        Candidato candidato = candidatoRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Candidato não encontrado"));
+
+        return mapCompleto(candidato);
+    }
+
+    // DTO BÁSICO (SEM EXPERIÊNCIAS E FORMACAO)
+    private CandidatoResponse mapBasico(Candidato candidato) {
         return new CandidatoResponse(
                 candidato.getIdCandidato(),
                 candidato.getNomeCompleto(),
-                candidato.getEmail(),
+                candidato.getUsuario().getEmail(),
+                candidato.getTelefone(),
+                candidato.getCpf(),
+                candidato.getGenero(),
+                candidato.getDataNascimento(),
+                candidato.getCidade(),
+                candidato.getEstado()
+        );
+    }
+
+    // DTO COMPLETO (COM EXPERIÊNCIAS E FORMAÇÃO)
+    private CandidatoCompletoResponse mapCompleto(Candidato candidato) {
+        return new CandidatoCompletoResponse(
+                candidato.getIdCandidato(),
+                candidato.getNomeCompleto(),
+                candidato.getUsuario().getEmail(),
                 candidato.getTelefone(),
                 candidato.getCpf(),
                 candidato.getGenero(),
                 candidato.getDataNascimento(),
                 candidato.getCidade(),
                 candidato.getEstado(),
+
+                //EXPERIENCIA
                 candidato.getExperiencias()
                         .stream()
                         .map(e -> new ExperienciaResponse(
@@ -105,8 +157,22 @@ public class CandidatoService {
                                 e.getPeriodoInicio(),
                                 e.getPeriodoFim()
                         ))
+                        .toList(),
+
+                //FORMAÇÃO
+                candidato.getFormacoes()
+                        .stream()
+                        .map(f-> new FormacaoResponse(
+                                f.getIdFormacao(),
+                                f.getNomeCurso(),
+                                f.getInstituicao(),
+                                f.getStatus(),
+                                f.getPeriodoInicio(),
+                                f.getPeriodoFim()
+                        ))
                         .toList()
         );
     }
 }
+
 

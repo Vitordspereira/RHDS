@@ -1,14 +1,11 @@
 package com.hub.hds.dto.candidato;
 
 import com.hub.hds.models.candidato.Genero;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
-
 import jakarta.validation.constraints.*;
+
 import java.time.LocalDate;
 
-public record CandidatoRequest(
+public record CandidatoCadastroDTO(
 
         @NotBlank(message = "Informe seu nome completo")
         @Pattern(
@@ -16,7 +13,7 @@ public record CandidatoRequest(
                 message = "Informe nome e sobrenome"
         )
         @Size(max = 150, message = "Nome pode ter no máximo 150 caracteres")
-        String nomeCompleto,
+                String nomeCompleto,
 
         @NotBlank(message = "E-mail é obrigatório")
         @Email(message = "E-mail inválido.")
@@ -60,3 +57,4 @@ public record CandidatoRequest(
         )
         String estado
 ) {}
+

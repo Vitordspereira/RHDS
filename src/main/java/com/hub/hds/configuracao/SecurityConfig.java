@@ -27,22 +27,22 @@ public class SecurityConfig {
                         .requestMatchers("/auth/login/empresa", "/auth/login").permitAll()
 
                         // CANDIDATOS
-                        .requestMatchers(HttpMethod.POST, "/candidatos").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/candidatos/cadastro").permitAll()
                         .requestMatchers(HttpMethod.PUT, "/candidatos/**").permitAll()
                         .requestMatchers(HttpMethod.DELETE, "/candidatos/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/candidatos/**").permitAll()
 
-                        //EXPERIÊNCIA
-                        .requestMatchers(HttpMethod.POST, "/experiencias").permitAll()
-                        .requestMatchers(HttpMethod.PUT, "/experiencias/**").permitAll()
-                        .requestMatchers(HttpMethod.DELETE, "/experiencias/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/experiencias/**").permitAll()
+                        //EXPERIÊNCIA (vinculada ao candidato)
+                        .requestMatchers(HttpMethod.POST, "/candidatos/*/experiencias").permitAll()
+                        .requestMatchers(HttpMethod.PUT, "/candidatos/*/experiencias/**").permitAll()
+                        .requestMatchers(HttpMethod.DELETE, "/candidatos/*/experiencias/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/candidatos/*/experiencias/**").permitAll()
 
-                        //FORMAÇÃO
-                        .requestMatchers(HttpMethod.POST, "/formacoes").permitAll()
-                        .requestMatchers(HttpMethod.PUT, "/formacoes/**").permitAll()
-                        .requestMatchers(HttpMethod.DELETE, "/formacoes/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/formacoes/**").permitAll()
+                        //FORMAÇÃO (vinculada ao candidato)
+                        .requestMatchers(HttpMethod.POST, "/candidatos/*/formacoes").permitAll()
+                        .requestMatchers(HttpMethod.PUT, "/candidatos/*/formacoes/**").permitAll()
+                        .requestMatchers(HttpMethod.DELETE, "/candidatos/*/formacoes/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/candidatos/*/formacoes/**").permitAll()
 
                         //RESET SENHA
                         .requestMatchers("/senha/esqueci-senha").permitAll()

@@ -16,10 +16,10 @@ public class Formacao {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id_formacao;
+    private Long idFormacao;
 
     @Column(nullable = false, length = 150)
-    private String nome_curso;
+    private String nomeCurso;
 
     @Column(nullable = false, length = 150)
     private String instituicao;
@@ -29,8 +29,12 @@ public class Formacao {
     private Status status;
 
     @Column(length = 7)
-    private String periodo_inicio;
+    private String periodoInicio;
 
     @Column(length = 7)
-    private String periodo_fim;
+    private String periodoFim;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_candidato")
+    private Candidato candidato;
 }

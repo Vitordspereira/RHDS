@@ -4,8 +4,10 @@ package com.hub.hds.service.senha;
 import com.hub.hds.dto.senha.ResetSenhaResponse;
 import com.hub.hds.models.candidato.Candidato;
 import com.hub.hds.models.senha.ResetSenha;
+import com.hub.hds.models.usuario.Usuario;
 import com.hub.hds.repository.candidato.CandidatoRepository;
 import com.hub.hds.repository.senha.ResetSenhaRepository;
+import com.hub.hds.repository.usuario.UsuarioRepository;
 import com.hub.hds.service.EmailService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -16,31 +18,31 @@ import java.util.UUID;
 @Service
 public class ResetSenhaService {
 
-    private final CandidatoRepository candidatoRepository;
+    private final UsuarioRepository usuarioRepository;
     private final ResetSenhaRepository resetSenhaRepository;
     private final EmailService emailService;
     private final PasswordEncoder passwordEncoder;
 
     public ResetSenhaService(
-            CandidatoRepository candidatoRepository,
+            UsuarioRepository usuarioRepository,
             ResetSenhaRepository resetSenhaRepository,
             EmailService emailService,
             PasswordEncoder passwordEncoder
     ) {
-        this.candidatoRepository = candidatoRepository;
+        this.usuarioRepository = usuarioRepository;
         this.resetSenhaRepository = resetSenhaRepository;
         this.emailService = emailService;
         this.passwordEncoder = passwordEncoder;
     }
 
     public void solicitarReset(String email) {
-        Candidato candidato = candidatoRepository.findByEmail(email)
+        Usuario usuario = usuarioRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Candidato não encontrado"));
 
         String token = UUID.randomUUID().toString();
 
         ResetSenha reset = new ResetSenha();
-        reset.setCandidato(candidato);
+        reset.setUsuario(usuario);
         reset.setToken(token);
         reset.setExpiraEm(LocalDateTime.now().plusMinutes(30));
         reset.setUtilizado(false);
@@ -50,7 +52,7 @@ public class ResetSenhaService {
         String link = "http://localhost:3000/resetar-senha?token=" + token;
 
         emailService.enviarEmail(
-                candidato.getEmail(),
+                usuario.getEmail(),
                 "Reset de senha",
                 "Clique no link para redefinir sua senha:\n" + link
         );
@@ -68,9 +70,9 @@ public class ResetSenhaService {
             throw new RuntimeException("Token expirado");
         }
 
-        Candidato candidato = reset.getCandidato();
-        candidato.setSenha(passwordEncoder.encode(dto.novaSenha()));
-        candidatoRepository.save(candidato);
+        Usuario usuario = reset.getUsuario();
+        usuario.setSenha(passwordEncoder.encode(dto.novaSenha()));
+        usuarioRepository.save(usuario);
 
         reset.setUtilizado(true);
         resetSenhaRepository.save(reset);

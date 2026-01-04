@@ -1,8 +1,13 @@
 package com.hub.hds.controller.candidato;
 
-import com.hub.hds.dto.candidato.CandidatoRequest;
+import com.hub.hds.dto.candidato.CandidatoCadastroDTO;
 import com.hub.hds.dto.candidato.CandidatoResponse;
+import com.hub.hds.dto.candidato.CandidatoCompletoResponse;
+import com.hub.hds.dto.candidato.CandidatoUpdateDTO;
 import com.hub.hds.service.candidato.CandidatoService;
+import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -18,37 +23,48 @@ public class CandidatoController {
         this.candidatoService = candidatoService;
     }
 
-    // ✅ POST — CRIAR CANDIDATO (com senha)
-    @PostMapping
-    public CandidatoResponse criar(@RequestBody CandidatoRequest request) {
-        return candidatoService.criar(request);
-    }
 
-    // ✅ PUT — ATUALIZAR CANDIDATO
-    @PutMapping("/{id}")
-    public CandidatoResponse atualizar(
-            @PathVariable Long id,
-            @RequestBody CandidatoRequest request
+    // CADASTRO INICIAL (COM LOGIN)
+    @PostMapping("/cadastro")
+    public ResponseEntity<CandidatoResponse> cadastrar(
+            @RequestBody @Valid CandidatoCadastroDTO request
     ) {
-        return candidatoService.atualizar(id, request);
+        CandidatoResponse response = candidatoService.cadastrar(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    // ✅ DELETE — DELETAR CANDIDATO
+    // LISTAR TODOS (BÁSICO)
+    @GetMapping
+    public ResponseEntity<List<CandidatoResponse>> listarTodos() {
+        List<CandidatoResponse> lista = candidatoService.listarTodos();
+        return ResponseEntity.ok(lista);
+    }
+
+    // BUSCAR CANDIDATO COMPLETO
+    @GetMapping("/{id}")
+    public ResponseEntity<CandidatoCompletoResponse> buscarCompleto(
+            @PathVariable Long id
+    ) {
+        CandidatoCompletoResponse response =
+                candidatoService.buscarCompleto(id);
+        return ResponseEntity.ok(response);
+    }
+
+    // ATUALIZAR PERFIL
+    @PutMapping("/{id}")
+    public ResponseEntity<CandidatoResponse> atualizar(
+            @PathVariable Long id,
+            @RequestBody @Valid CandidatoUpdateDTO request
+    ) {
+        CandidatoResponse response =
+                candidatoService.atualizar(id, request);
+        return ResponseEntity.ok(response);
+    }
+
+    // DELETAR
     @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deletar(@PathVariable Long id) {
         candidatoService.deletar(id);
     }
-
-    // ✅ GET — BUSCAR CANDIDATO COMPLETO (COM EXPERIÊNCIAS)
-    @GetMapping("/{id}")
-    public CandidatoResponse buscarPorId(@PathVariable Long id) {
-        return candidatoService.buscarCompleto(id);
-    }
-
-    // ✅ GET — LISTAR TODOS OS CANDIDATOS
-    @GetMapping
-    public List<CandidatoResponse> listarTodos() {
-        return candidatoService.listarTodos();
-    }
 }
-

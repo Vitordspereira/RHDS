@@ -20,10 +20,10 @@ public class ExperienciaService {
         this.candidatoRepository = candidatoRepository;
     }
 
-    // ✅ POST — cria experiência para um candidato
-    public ExperienciaResponse criar(ExperienciaRequest request) {
+    // CRIAR EXPERIÊNCIA
+    public ExperienciaResponse criar(Long idCandidato, ExperienciaRequest request) {
 
-        Candidato candidato = candidatoRepository.findById(request.idCandidato())
+        Candidato candidato = candidatoRepository.findById(idCandidato)
                 .orElseThrow(() -> new RuntimeException("Candidato não encontrado"));
 
         Experiencia experiencia = Experiencia.builder()
@@ -38,12 +38,10 @@ public class ExperienciaService {
 
         candidato.adicionarExperiencia(experiencia);
 
-        candidatoRepository.save(candidato);
-
         return mapToResponse(experiencia);
     }
 
-    // GET — lista experiências de um candidato
+    // LISTAR EXPERIÊNCIAS DO CANDIDATO
     public List<ExperienciaResponse> listarPorCandidato(Long idCandidato) {
 
         Candidato candidato = candidatoRepository.findById(idCandidato)
@@ -55,7 +53,7 @@ public class ExperienciaService {
                 .toList();
     }
 
-    // PUT — atualiza experiência do candidato
+    // ATUALIZAR EXPERIÊNCIA
     public ExperienciaResponse atualizar(
             Long idCandidato,
             Long idExperiencia,
@@ -82,18 +80,22 @@ public class ExperienciaService {
         return mapToResponse(experiencia);
     }
 
-    // DELETE — remove experiência do candidato
+
+    // DELETAR EXPERIÊNCIA
     public void deletar(Long idCandidato, Long idExperiencia) {
 
         Candidato candidato = candidatoRepository.findById(idCandidato)
                 .orElseThrow(() -> new RuntimeException("Candidato não encontrado"));
 
-        candidato.getExperiencias()
+        boolean removido = candidato.getExperiencias()
                 .removeIf(e -> e.getIdExperiencia().equals(idExperiencia));
 
-        candidatoRepository.save(candidato);
+        if (!removido) {
+            throw new RuntimeException("Experiência não encontrada");
+        }
     }
 
+    // MapToResponse
     private ExperienciaResponse mapToResponse(Experiencia experiencia) {
         return new ExperienciaResponse(
                 experiencia.getIdExperiencia(),
@@ -107,4 +109,3 @@ public class ExperienciaService {
         );
     }
 }
-

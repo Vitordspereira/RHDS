@@ -2,90 +2,114 @@ package com.hub.hds.service.formacao;
 
 import com.hub.hds.dto.formacao.FormacaoRequest;
 import com.hub.hds.dto.formacao.FormacaoResponse;
+import com.hub.hds.models.candidato.Candidato;
 import com.hub.hds.models.formacao.Formacao;
 import com.hub.hds.repository.candidato.CandidatoRepository;
-import com.hub.hds.repository.formacao.FormacaoRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
-import java.text.Normalizer;
 import java.util.List;
 
-import static org.springframework.data.jpa.domain.AbstractPersistable_.id;
-
 @Service
+@Transactional
 public class FormacaoService {
 
-    private final FormacaoRepository formacaoRepository;
     private final CandidatoRepository candidatoRepository;
 
-    public FormacaoService(FormacaoRepository formacaoRepository, CandidatoRepository candidatoRepository) {
-
-        this.formacaoRepository = formacaoRepository;
+    public FormacaoService(CandidatoRepository candidatoRepository) {
         this.candidatoRepository = candidatoRepository;
-
     }
 
-    //CRIAR
-    public FormacaoResponse criar(FormacaoRequest request){
+    // =========================
+    // CRIAR FORMAÇÃO
+    // =========================
+    public FormacaoResponse criar(Long idCandidato, FormacaoRequest request) {
+
+        Candidato candidato = candidatoRepository.findById(idCandidato)
+                .orElseThrow(() -> new RuntimeException("Candidato não encontrado"));
 
         Formacao formacao = Formacao.builder()
-                .nome_curso(request.nome_curso())
+                .nomeCurso(request.nomeCurso())
                 .instituicao(request.instituicao())
                 .status(request.status())
-                .periodo_inicio(request.periodo_inicio())
-                .periodo_fim(request.periodo_fim())
+                .periodoInicio(request.periodoInicio())
+                .periodoFim(request.periodoFim())
                 .build();
 
-        Formacao salva = formacaoRepository.save(formacao);
+        // 🔴 MESMO PADRÃO DA EXPERIÊNCIA
+        candidato.adicionarFormacao(formacao);
 
-        return mapToResponse(salva);
+        return mapToResponse(formacao);
     }
 
-    //LISTAR TODOS
-    public List<FormacaoResponse> listar(){
-        return formacaoRepository.findAll()
+    // =========================
+    // LISTAR FORMAÇÕES DO CANDIDATO
+    // =========================
+    public List<FormacaoResponse> listarPorCandidato(Long idCandidato) {
+
+        Candidato candidato = candidatoRepository.findById(idCandidato)
+                .orElseThrow(() -> new RuntimeException("Candidato não encontrado"));
+
+        return candidato.getFormacoes()
                 .stream()
                 .map(this::mapToResponse)
                 .toList();
     }
 
-    //BUSCAR POR ID
-    public FormacaoResponse buscarPorId(Long id){
-        Formacao formacao = formacaoRepository.findById(id)
-                .orElseThrow(()-> new RuntimeException("Formação não encontrada"));
+    // =========================
+    // ATUALIZAR FORMAÇÃO
+    // =========================
+    public FormacaoResponse atualizar(
+            Long idCandidato,
+            Long idFormacao,
+            FormacaoRequest request
+    ) {
+
+        Candidato candidato = candidatoRepository.findById(idCandidato)
+                .orElseThrow(() -> new RuntimeException("Candidato não encontrado"));
+
+        Formacao formacao = candidato.getFormacoes()
+                .stream()
+                .filter(f -> f.getIdFormacao().equals(idFormacao))
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("Formação não encontrada"));
+
+        formacao.setNomeCurso(request.nomeCurso());
+        formacao.setInstituicao(request.instituicao());
+        formacao.setStatus(request.status());
+        formacao.setPeriodoInicio(request.periodoInicio());
+        formacao.setPeriodoFim(request.periodoFim());
 
         return mapToResponse(formacao);
     }
 
-    //ATUALIZAR
-    public FormacaoResponse atualizar(Long id, FormacaoRequest request){
-        Formacao formacao = formacaoRepository.findById(id)
-                .orElseThrow(()-> new RuntimeException("Formação não encontrada"));
+    // =========================
+    // DELETAR FORMAÇÃO
+    // =========================
+    public void deletar(Long idCandidato, Long idFormacao) {
 
-        formacao.setNome_curso(request.nome_curso());
-        formacao.setInstituicao(request.instituicao());
-        formacao.setStatus(request.status());
-        formacao.setPeriodo_inicio(request.periodo_inicio());
-        formacao.setPeriodo_fim(request.periodo_fim());
+        Candidato candidato = candidatoRepository.findById(idCandidato)
+                .orElseThrow(() -> new RuntimeException("Candidato não encontrado"));
 
-        Formacao atualizada = formacaoRepository.save(formacao);
-        return mapToResponse(atualizada);
+        boolean removido = candidato.getFormacoes()
+                .removeIf(f -> f.getIdFormacao().equals(idFormacao));
+
+        if (!removido) {
+            throw new RuntimeException("Formação não encontrada");
+        }
     }
 
-    // DELETAR
-    public void deletar(Long id){
-        formacaoRepository.deleteById(id);
-    }
-
-    //MapToResponse
-    private FormacaoResponse mapToResponse(Formacao formacao){
+    // =========================
+    // MAPPER
+    // =========================
+    private FormacaoResponse mapToResponse(Formacao formacao) {
         return new FormacaoResponse(
-                formacao.getId_formacao(),
-                formacao.getNome_curso(),
+                formacao.getIdFormacao(),
+                formacao.getNomeCurso(),
                 formacao.getInstituicao(),
                 formacao.getStatus(),
-                formacao.getPeriodo_inicio(),
-                formacao.getPeriodo_fim()
+                formacao.getPeriodoInicio(),
+                formacao.getPeriodoFim()
         );
     }
 }

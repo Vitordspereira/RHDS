@@ -1,6 +1,7 @@
 package com.hub.hds.models.senha;
 
 import com.hub.hds.models.candidato.Candidato;
+import com.hub.hds.models.usuario.Usuario;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -22,7 +23,7 @@ public class ResetSenha {
 
     @ManyToOne
     @JoinColumn(name = "id_candidato", nullable = false)
-    private Candidato candidato;
+    private Usuario usuario;
 
 
     @Column(nullable = false, unique = true, length = 100)

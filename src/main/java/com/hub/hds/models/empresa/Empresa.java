@@ -1,13 +1,14 @@
 package com.hub.hds.models.empresa;
 
+import com.hub.hds.models.recrutador.Recrutador;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
-@Table(name = "empresas")
+@Table(name = "empresa")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -17,50 +18,33 @@ public class Empresa {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id_empresa;
+    @Column(name = "id_empresa")
+    private Long idEmpresa;
 
-    @Column(nullable = false)
-    private Boolean matrizFilial;
+    @Column(nullable = false, length = 150)
+    private String nome;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private NumeroFuncionarios numeroFuncionarios;
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = true)
-    private NumeroFuncionarios filial_numero_funcionarios;
-
-    @Column(length = 18, unique = true, nullable = true)
+    @Column(length = 18, unique = true)
     private String cnpj;
 
-    @Column(length = 100, nullable = false)
+    @Column(nullable = false, length = 100)
     private String ramo;
 
-    @Column(length = 150, nullable = false)
-    private String nome_responsavel;
+    @Column(name = "possui_filiais", nullable = false)
+    private Boolean possuiFiliais;
 
-    @Column(length = 150,nullable = false, unique = true)
-    private String email;
+    @Column(name = "numero_funcionarios", nullable = false)
+    private Integer numeroFuncionarios;
 
-    @Column(length = 20, nullable = false)
-    private String celular;
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
 
-    @Column(length = 255, nullable = false)
-    private String senha;
-
-    @Column(updatable = false)
-    private LocalDateTime criado_em;
-
-    private LocalDateTime atualizado_em;
+    @OneToMany(mappedBy = "empresa")
+    private List<Recrutador> recrutadores;
 
     @PrePersist
     protected void onCreate() {
-        this.criado_em = LocalDateTime.now();
-        this.atualizado_em = LocalDateTime.now();
-    }
-
-    @PreUpdate
-    protected void onUpdate() {
-        this.atualizado_em = LocalDateTime.now();
+        this.createdAt = LocalDateTime.now();
     }
 }
+

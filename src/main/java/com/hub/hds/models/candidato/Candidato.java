@@ -1,7 +1,10 @@
 package com.hub.hds.models.candidato;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.hub.hds.models.experiencia.Experiencia;
+import com.hub.hds.models.formacao.Formacao;
+import com.hub.hds.models.usuario.Usuario;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -26,12 +29,12 @@ public class Candidato {
     @Column(name = "nome_completo", nullable = false, length = 150)
     private String nomeCompleto;
 
-    @Column(nullable = false, length = 150, unique = true)
-    private String email;
+    //@Column(nullable = false, length = 150, unique = true)
+    //private String email;
 
-    @Column(nullable = false, length = 10)
-    @JsonIgnore
-    private String senha;
+    //@Column(nullable = false, length = 10)
+    //@JsonIgnore
+    //private String senha;
 
     @Column(nullable = false, length = 14)
     private String telefone;
@@ -53,8 +56,20 @@ public class Candidato {
     @OneToMany(mappedBy = "candidato", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Experiencia> experiencias = new ArrayList<>();
 
+    @OneToMany(mappedBy = "candidato", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Formacao> formacoes = new ArrayList<>();
+
+    @OneToOne
+    @JoinColumn(name = "usuario_id", nullable = false)
+    private Usuario usuario;
+
     public void adicionarExperiencia(Experiencia experiencia) {
         experiencias.add(experiencia);
         experiencia.setCandidato(this);
+    }
+
+    public void adicionarFormacao(Formacao formacao) {
+        formacoes.add(formacao);
+        formacao.setCandidato(this);
     }
 }
