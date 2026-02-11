@@ -12,12 +12,27 @@ Sistema completo de gestão de vagas com painel empresa e controle de candidatos
 
 ## 🗄️ Banco de Dados
 Modelagem relacional com as seguintes principais tabelas:
-- empresa
-- vaga
+
+- alertas 
 - candidato
-- candidatura
-- pipeline_etapa
-- vaga_talento
+- candidaturas
+- empresa
+- empresa_candidato
+- etapa_processo
+- experiencias
+- formacoes
+- pre_candidaturas
+- processo_seletivo
+- recrutador
+- reset_senha
+- unidade_empresa
+- usuario
+- vaga
+- vaga_cnh
+- vaga_formacao
+- vaga_idioma
+- vaga_localizacao
+- vaga_requisitos
 
 Script disponível em: /database/schema.sql
 
