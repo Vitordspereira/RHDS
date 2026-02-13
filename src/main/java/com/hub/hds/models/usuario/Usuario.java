@@ -1,16 +1,25 @@
 package com.hub.hds.models.usuario;
 
 import jakarta.persistence.*;
+import lombok.*;
 
 
 import java.time.LocalDateTime;
 
+
 @Entity
 @Table(name = "usuario")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+@EqualsAndHashCode(of = "idUsuario")
 public class Usuario {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id_usuario")
     private Long idUsuario;
 
     @Column(nullable = false, unique = true, length = 150)
@@ -23,6 +32,7 @@ public class Usuario {
     @Enumerated(EnumType.STRING)
     private Role role;
 
+    @Builder.Default
     @Column(nullable = false)
     private Boolean ativo = true;
 
@@ -31,50 +41,10 @@ public class Usuario {
 
     @PrePersist
     protected void onCreate(){
-     this.createdAt = LocalDateTime.now();
-    }
-
-    public Long getIdUsuario() {
-        return idUsuario;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
-    public void setIdUsuario(Long idUsuario) {
-        this.idUsuario = idUsuario;
-    }
-
-    public String getSenha() {
-        return senha;
-    }
-
-    public void setSenha(String senha) {
-        this.senha = senha;
-    }
-
-    public Role getRole() {
-        return role;
-    }
-
-    public void setRole(Role role) {
-        this.role = role;
-    }
-
-    public Boolean getAtivo() {
-        return ativo;
-    }
-
-    public void setAtivo(Boolean ativo) {
-        this.ativo = ativo;
-    }
-
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
+        this.createdAt = LocalDateTime.now();
+        if (this.ativo == null) {
+            this.ativo = true;
+        }
     }
 }
+

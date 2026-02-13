@@ -1,24 +1,20 @@
 package com.hub.hds.models.candidato;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonManagedReference;
-import com.hub.hds.models.experiencia.Experiencia;
-import com.hub.hds.models.formacao.Formacao;
 import com.hub.hds.models.usuario.Usuario;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-@Entity
-@Table(name = "candidatos")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@Entity
+@Table(name = "candidato")
 public class Candidato {
 
     @Id
@@ -26,50 +22,53 @@ public class Candidato {
     @Column(name = "id_candidato")
     private Long idCandidato;
 
-    @Column(name = "nome_completo", nullable = false, length = 150)
+    @Column(name = "nome_completo", nullable = false)
     private String nomeCompleto;
 
-    //@Column(nullable = false, length = 150, unique = true)
-    //private String email;
-
-    //@Column(nullable = false, length = 10)
-    //@JsonIgnore
-    //private String senha;
-
-    @Column(nullable = false, length = 14)
-    private String telefone;
-
-    @Column(nullable = false, length = 14, unique = true)
+    @Column(name = "cpf")
     private String cpf;
 
+    @Column(name = "telefone")
+    private String telefone;
+
     @Enumerated(EnumType.STRING)
+    @Column(name = "genero", nullable = false)
     private Genero genero;
 
-    private LocalDate dataNascimento;
+    @Column(name = "data_nascimento", nullable = false)
+    private String dataNascimento;
 
-    @Column(length = 100)
+    @Column(name = "cidade")
     private String cidade;
 
-    @Column(length = 2)
+    @Column(name = "estado")
     private String estado;
 
-    @OneToMany(mappedBy = "candidato", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Experiencia> experiencias = new ArrayList<>();
+    @Column(name = "video_apresentacao")
+    private String videoApresentacao;
 
-    @OneToMany(mappedBy = "candidato", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Formacao> formacoes = new ArrayList<>();
+    @Column(name = "created_at")
+    private LocalDateTime createdAt;
 
-    @OneToOne
+    // 🔐 Login
+    @ManyToOne
     @JoinColumn(name = "usuario_id", nullable = false)
     private Usuario usuario;
 
-    public void adicionarExperiencia(Experiencia experiencia) {
-        experiencias.add(experiencia);
-        experiencia.setCandidato(this);
-    }
+    // 📄 Experiências
+    @Builder.Default
+    @OneToMany(mappedBy = "candidato", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Experiencia> experiencias = new ArrayList<>();
 
-    public void adicionarFormacao(Formacao formacao) {
-        formacoes.add(formacao);
-        formacao.setCandidato(this);
+
+    // 🎓 Formações
+    @Builder.Default
+    @OneToMany(mappedBy = "candidato", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Formacao> formacoes = new ArrayList<>();
+
+
+    @PrePersist
+    protected void onCreate() {
+        this.createdAt = LocalDateTime.now();
     }
 }

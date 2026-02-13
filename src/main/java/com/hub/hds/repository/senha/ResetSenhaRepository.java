@@ -8,4 +8,5 @@ import java.util.Optional;
 public interface ResetSenhaRepository extends JpaRepository<ResetSenha, Long> {
 
     Optional<ResetSenha> findByToken(String token);
+    boolean existsByToken(String token);
 }

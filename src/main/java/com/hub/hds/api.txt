@@ -1,0 +1,608 @@
+# DOCUMENTAÇÃO DA API — HUB HDS
+
+## BASE URL
+http:// 192.168.1.70:8080
+
+---
+
+## AUTENTICAÇÃO
+
+### Login – Candidato
+POST /auth/login
+Público
+
+Body:
+{
+  "email": "email@email.com",
+  "senha": "Senha@123"
+}
+
+Resposta:
+{
+    "token": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJyYWZhZWwuc2lsdmExMEBlbWFpbC5jb20iLCJpZFVzdWFyaW8iOjU1LCJyb2xlIjoiQ0FORElEQVRPIiwiaWF0IjoxNzY4Mzg5MDI3LCJleHAiO
+    jE3Njg0NzU0MjcsImlkQ2FuZGlkYXRvIjoxNX0.bUXiPxzIR5DJUhFuZOodzeIZCoTFfQUybF5qOudI0W0",
+    "role": "CANDIDATO"
+}
+
+### Login – Empresa
+POST /auth/login/empresa
+Público
+
+Body:
+{
+  "email": "email@email.com",
+  "senha": "Senha@123"
+}
+
+Resposta:
+{
+    "token": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJyYWZhZWwuc2lsdmExMEBlbWFpbC5jb20iLCJpZFVzdWFyaW8iOjU1LCJyb2xlIjoiQ0FORElEQVRPIiwiaWF0IjoxNzY4Mzg5MDI3LCJleHAiO
+    jE3Njg0NzU0MjcsImlkQ2FuZGlkYXRvIjoxNX0.bUXiPxzIR5DJUhFuZOodzeIZCoTFfQUybF5qOudI0W0",
+    "role": "EMPRESA"
+}
+
+### Dashboard - Empresa
+GET empresa/me
+
+Authorization: Bearer TOKEN_DO_CANDIDATO
+
+Resposta:
+
+{
+    "idEmpresa": 32,
+    "nomeEmpresa": "Aurora Gestão e Serviços Corporativos LTDA",
+    "cnpj": "52.374.981/0001-62",
+    "ramo": "Gestão Empresarial, Consultoria Organizacional e Terceirização",
+    "possuiFiliais": true,
+    "unidadeEmpresa": [
+        {
+            "idUnidadeEmpresa": 19,
+            "numeroFuncionarios": 120
+        },
+        {
+            "idUnidadeEmpresa": 20,
+            "numeroFuncionarios": 48
+        }
+    ],
+    "recrutadores": [
+        {
+            "idRecrutador": 12,
+            "nome": "Ricardo Menezes Almeida",
+            "emailCorporativo": "ricardo.almeida@auroragestao.com.br",
+            "telefone": "11991234567"
+        }
+    ]
+}
+
+##Cadastro - Candidato
+POST /candidatos
+
+{
+    "candidatoId": 1,
+    "message": "Candidato cadastrado com sucesso"
+}
+
+GET /candidatos
+GET /candidatos/id
+PUT /candidatos/id
+DELETE //candidatos/id
+
+##Login - Dashboard candidato
+GET - /api/candidato/dashboard?idCandidato=15
+
+GET - /api/candidato/me
+
+POST - /auth/reset-senha
+
+{
+    "email": "caiquegon@icloud.com"
+}
+
+Resposta:
+
+{
+    "message": "Encaminhamos um link de alteração de senha no seu e-mail"
+}
+
+POST - /auth/reset-senha/confirmar
+
+{
+  "token": "abc123xyz",
+  "novaSenha": "Senha@123",
+}
+
+
+Resposta: 200 OK
+
+##Cadastro de empresa
+POST - /empresa/cadastro
+
+Body: {
+        "nomeEmpresa": "Aurora Inovação Empresarial LTDA",
+        "cnpj": "91.673.842/0001-57",
+        "ramo": "Inovação e Estratégia Digital",
+        "possuiFiliais": true,
+        "unidadeEmpresaDTO": [
+          {
+            "tipoUnidade": "MATRIZ",
+            "numeroFuncionarios": 30
+          },
+          {
+            "tipoUnidade": "FILIAL",
+            "numeroFuncionarios": 12
+          }
+        ],
+        "recrutadorDTO": {
+          "nome": "Paulo Henrique Costa",
+          "emailCorporativo": "paulo.costa@aurorainovacao.com.br",
+          "telefone": "11965439821"
+        },
+        "usuarioId": 5
+      }
+
+Se possuiFiliais for False:
+
+{
+  "nomeEmpresa": "Aurora Inovação Empresarial LTDA",
+  "cnpj": "91.673.842/0001-57",
+  "ramo": "Inovação e Estratégia Digital",
+  "possuiFiliais": false,
+  "unidadeEmpresaDTO": [
+    {
+      "tipoUnidade": "MATRIZ",
+      "numeroFuncionarios": 30
+    }
+  ],
+  "recrutadorDTO": {
+    "nome": "Paulo Henrique Costa",
+    "emailCorporativo": "paulo.costa@aurorainovacao.com.br",
+    "telefone": "11965439821"
+  },
+  "usuarioId": 5
+}
+
+Resposta:
+
+{
+    message: "Cadastro realizado com sucesso"
+}
+
+POST - /candidaturas
+
+
+{
+  "candidatoId": 20,
+  "vagaId": 5
+}
+
+Resposta:
+
+{
+    "mensagem": "Candidatura realizada com sucesso",
+    "dados": {
+        "idCandidatura": 2,
+        "statusCandidatura": "ENVIADA"
+    }
+}
+
+POST - /vagas
+
+Body: {
+        "unidadeEmpresa": {
+          "idUnidadeEmpresa": 1
+        },
+        "recrutador": {
+          "idRecrutador": 1
+        },
+
+        "cargo": "Médico Veterinário",
+        "complemento": "Clínica de Pequenos Animais",
+        "areaProfissional": "AREA ANIMAL",
+        "especializacao": "CLINICA VETERINARIA",
+        "nivelHierarquico": "PLENO",
+
+        "tipoContrato": "CLT",
+        "salario": 6500.00,
+
+        "contratacaoUrgente": true,
+        "empresaConfidencial": false,
+
+        "descricao": "Atuação em clínica veterinária com atendimento a cães e gatos, realização de consultas, exames básicos, acompanhamento clínico e orientação aos tutores.",
+
+        "statusVaga": "ABERTA",
+
+        "localizacao": {
+          "tipoEndereco": "OUTRO",
+          "rua": "Rua dos Animais",
+          "numero": "250",
+          "complemento": "Clínica Vet Vida",
+          "bairro": "Vila Mariana",
+          "cidade": "São Paulo",
+          "estado": "SP",
+          "cep": "04101-000"
+        },
+
+        "formacao": {
+          "escolaridade": "SUPERIOR_COMPLETO",
+          "experiencia": "ENTRE_1_E_3"
+        },
+
+        "requisitos": {
+          "idadeMinima": 21,
+          "idadeMaxima": 30,
+          "idadeObrigatoria": false,
+          "sexo": "NAO_ESPECIFICADO",
+          "habilitacao": false,
+          "veiculoProprio": false,
+          "viajar": false,
+          "mudarResidencia": false
+        },
+
+        "idiomas": [],
+
+        "cnhs": []
+      }
+
+Resposta:
+
+{
+    "idVaga": 6,
+    "mensagem": "Vaga criada com sucesso"
+}
+
+### GET - /vagas
+
+enviar para o Caique o documento da Emilly de informações de vaga
+
+### PUT - empresa/atualizar
+
+Body:
+
+{
+  "nomeEmpresa": "HDS Tecnologia Atualizada",
+  "ramo": "Tecnologia",
+  "possuiFiliais": true
+}
+
+Resposta: 200 - OK
+
+Importante: candidato, deve fazer 1 vídeo de 1 min explicando sua experiencia, video deve constar no dashboard do candidato.
+
+Listar candidatos
+### GET - /{empresaId}/candidatos
+
+Favoritar candidato
+### POST - /{empresaId}/candidatos/{candidatoId}/favoritar
+
+Desfavoritar
+### POST - /{empresaId}/candidatos/{candidatoId}/desfavoritar'
+
+Vagas
+Listar vagas
+### GET - /vagas/{me}
+
+Mesma resposta do me/{id} pórem retorna todas as vagas
+
+### GET - /vagas/me/{id}
+Resposta :
+{
+ "idVaga": 1,
+    "cargo": "Supervisor",
+    "complementoCargo": "Casa",
+    "cidade": "SAO PAULO",
+    "estado": "SP",
+    "descricao": "TRDSTYESYSEY",
+    "tipoContrato": "CLT",
+    "salario": 6100.00,
+    "contratacaoUrgente": true,
+    "empresaConfidencial": false,
+    "localizacao": {
+        "tipoEndereco": "OUTRO",
+        "rua": "RUA DOMINGUES VIDIGAL",
+        "numero": "124",
+        "complemento": "Casa",
+        "bairro": "JARDIM JARAGUA (ITAIM PAULISTA)",
+        "cidade": "SAO PAULO",
+        "estado": "SP",
+        "cep": "08160-350"
+    },
+    "formacao": {
+        "escolaridade": "SUPERIOR_COMPLETO",
+        "experiencia": "ENTRE_1_E_3"
+    },
+    "requisitos": {
+        "idadeMinima": 12,
+        "idadeMaxima": 254,
+        "sexo": "NAO_ESPECIFICADO",
+        "habilitacao": true,
+        "veiculoProprio": true,
+        "viajar": false,
+        "mudarResidencia": false
+    },
+    "idiomas": [],
+    "cnhs": []
+}
+
+Match
+
+Cálcula o match do candidato com uma unica vaga
+### GET - /vagas/{idVaga}/match/{idCandidato}
+
+Exemplo de resposta:
+
+{
+    "idVaga": 2,
+    "idCandidato": 5,
+    "percentual": 45,
+    "nivel": "BAIXO"
+}
+
+Cálcula o match do candidato com as vagas recomendadas para ele
+### GET - /vagas/candidatos/{idCandidato}/match
+
+Exemplo de resposta:
+
+  {
+        "idVaga": 2,
+        "tituloVaga": "Supervisor de Operações - Logística e Suprimentos",
+        "percentual": 60,
+        "nivel": "MEDIO"
+    },
+    {
+        "idVaga": 3,
+        "tituloVaga": "Supervisor de Operações",
+        "percentual": 60,
+        "nivel": "MEDIO"
+    },
+Restante de vagas abaixo conforme o nível de match
+
+Video candidato
+### POST - /candidatos/{idCandidato}/video
+exemplo -  http://localhost:8080/candidatos/6/video
+
+video → File → arquivo.mp4
+Resposta:
+{
+200 ok
+}
+
+
+### GET - /candidatos/{id}/video - id é o idCandidato
+
+Resposta
+
+{
+videos/url do video
+}
+
+### GET - "/{empresaId}/candidatos/{candidatoId}"
+Exemplo: http://localhost:8080/empresa/32/candidatos/6
+
+Resposta: {
+
+"idCandidato": 6,
+"nomeCompleto": "Mariana Alves de Souza",
+"genero": "FEMININO"
+"cidade": "São Paulo",
+"estado": "SP",
+"favoritado": false
+
+
+Método candidatura
+
+### POST - /pre-candidaturas
+
+candidato informa e-mail e gera token
+
+### GET - /pre-candidaturas/validar
+
+valida o token do candidato
+
+### POST - /pre-candidaturas/confirmar
+
+confirma o token e envia o email "CANDIDATURA REALIZADA COM SUCESSO"
+
+-- vaga requisitos adicionar experiencia minima
+-- colocar NotBlank e NotNull
+-- Caique pediu para limpar banco de dados
+-- Adicionar método deletar em vagas, funcionando mas verificar como melhora em relação a não deletar pos a candidaturas na vaga
+
+No front, basta:
+
+<video controls src="/candidatos/video/stream/cand_1_3f9a2c7e-xxxx.mp4"></video>
+
+
+Ou, se você busca a URL via API:
+
+const url = await fetch(`/candidatos/1/video`).then(r => r.text());
+video.src = url;
+
+
+1️⃣ Front envia o vídeo
+
+O front tem que fazer exatamente isso (não importa framework):
+
+const formData = new FormData();
+formData.append("video", file);
+
+fetch(`/candidatos/${id}/video`, {
+  method: "POST",
+  body: formData
+});
+
+
+⚠️ Regra de ouro:
+
+❌ NÃO setar Content-Type
+
+✔ Deixar o browser cuidar
+
+2️⃣ Resposta esperada
+
+Status 200 OK
+
+Nenhum erro no console
+
+Vídeo salvo no servidor
+
+3️⃣ Exibir o vídeo
+
+Depois do upload:
+
+const url = await fetch(`/candidatos/${id}/video`).then(r => r.text());
+video.src = url;
+
+
+Ou direto:
+
+<video src="/candidatos/video/stream/arquivo.mp4" controls></video>
+
+-- Video candidato
+
+- Upload
+## POST - /candidatos/{idCandidato}/video
+
+Resposta: Upload de vídeo
+
+## GET - http://localhost:8080/candidatos/{idCandidato}/video
+
+Resposta: /candidatos/video/stream/cand_2_5b07db35-9ee3-4712-a9b9-0557cfed45af.mp4
+
+http://localhost:8080/candidatos/video/stream/cand_2_5b07db35-9ee3-4712-a9b9-0557cfed45af.mp4
+
+Resposta: video começa
+
+- Streaming de vídeo
+## GET - /candidatos/video/stream/{filename:.+}
+
+Ou, se você busca a URL via API:
+
+const url = await fetch(`/candidatos/1/video`).then(r => r.text());
+video.src = url;
+
+
+1️⃣ Front envia o vídeo
+
+O front tem que fazer exatamente isso (não importa framework):
+
+const formData = new FormData();
+formData.append("video", file);
+
+fetch(`/candidatos/${id}/video`, {
+  method: "POST",
+  body: formData
+});
+
+-- Alerta de vagas
+
+## POST - /alerta
+
+{
+  "email": "email@email.com",
+  "cargo": "Teste",
+  "cidade": "São Paulo"
+}
+
+Listar categoria
+
+## GET /vagas/list?categoriaVaga=ADMINISTRATIVO
+
+Pré-candidatura
+
+##POST - http://localhost:8080/pre-candidaturas/{idVaga}?email=email@icloud.com
+
+Resposta: Encaminha e-mail token
+
+###GET - http://localhost:8080/pre-candidaturas/validar?token=informa código token
+
+Resposta: {
+              "status": "INICIADA",
+              "vagaId": {idVaga},
+              "email": "email@email.com"
+          }
+
+###POST - http://localhost:8080/pre-candidaturas/confirmar?token=código token
+
+Resposta: e-mail de candidatura confirmada
+
+Perfil do candidato em emrpesa
+
+GET - http://localhost:8080/empresa/{idCandidato}/perfil - adicionado resumo profissional
+
+Processo seletivo das vagas
+GET - http://localhost:8080/empresa/vagas/{idVaga}/etapas
+
+PUT - http://localhost:8080/empresa/vagas/{idVaga}/fechar
+
+Deletar de vagas
+DEL- http://localhost:8080/vagas/{idVaga}
+
+Cadastro empresa
+
+POST - http://localhost:8080/empresa/cadastro
+
+Body:
+{
+  "nomeEmpresa": "Atlas Prime Logística e Soluções Integradas LTDA",
+  "cnpj": "63928415000177",
+  "ramo": "Logística, Transporte de Cargas, Armazenagem e Soluções Integradas",
+  "possuiFiliais": true,
+
+  "unidade": [
+    {
+      "tipoUnidade": "MATRIZ",
+      "numeroFuncionarios": 80
+    },
+    {
+      "tipoUnidade": "FILIAL",
+      "numeroFuncionarios": 45
+    }
+  ],
+
+  "recrutador": {
+    "nome": "Carlos Eduardo Farias",
+    "emailCorporativo": "carlos.farias@atlasprime.com.br",
+    "telefone": "11993456782",
+    "senha": "Atlas@2026"
+  }
+}
+
+Resposta:
+
+{
+    "mensagem": "Cadastro realizado com sucesso"
+}
+
+//POST - http://localhost:8080/alerta
+
+{
+  "email": "email@gmail.com",
+  "cargo": "Qualquer cargo (Desenvolvedor, analista, vendedor)",
+  "cidade": Qualquer cidade (São Paulo, Minas Gerais, Bahia)"
+}
+
+listar vagas candidatadas
+
+GET - http://localhost:8080/candidato/minhas-candidaturas
+
+Alerta de vagas
+
+//GET - http://localhost:8080/alerta/cancelar?token={colocar token aqui}
+
+Pre-Candidatura
+
+Iniciar pré-candidatura
+## POST - /pre-candidaturas/{idVaga}
+
+Validar token
+## GET - /pre-candidaturas/validar
+
+Confirmar
+## POST - /pre-candidaturas/confirmar
+
+Candidaturas
+
+## POST - candidaturas
+
+Alterar status da candidatura
+## PATCH - candidaturas/{id}/status"

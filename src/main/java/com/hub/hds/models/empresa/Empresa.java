@@ -1,6 +1,8 @@
 package com.hub.hds.models.empresa;
 
 import com.hub.hds.models.recrutador.Recrutador;
+import com.hub.hds.models.unidadeEmpresa.UnidadeEmpresa;
+import com.hub.hds.models.vaga.Vaga;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -21,8 +23,8 @@ public class Empresa {
     @Column(name = "id_empresa")
     private Long idEmpresa;
 
-    @Column(nullable = false, length = 150)
-    private String nome;
+    @Column(name = "nome_empresa",nullable = false, length = 150)
+    private String nomeEmpresa;
 
     @Column(length = 18, unique = true)
     private String cnpj;
@@ -33,13 +35,13 @@ public class Empresa {
     @Column(name = "possui_filiais", nullable = false)
     private Boolean possuiFiliais;
 
-    @Column(name = "numero_funcionarios", nullable = false)
-    private Integer numeroFuncionarios;
-
-    @Column(name = "created_at", updatable = false)
+    @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    @OneToMany(mappedBy = "empresa")
+    @OneToMany(mappedBy = "empresa", fetch = FetchType.LAZY)
+    private List<UnidadeEmpresa> unidadeEmpresas;
+
+    @OneToMany(mappedBy = "empresa", fetch = FetchType.LAZY)
     private List<Recrutador> recrutadores;
 
     @PrePersist

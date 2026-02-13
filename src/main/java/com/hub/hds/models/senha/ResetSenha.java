@@ -1,6 +1,5 @@
 package com.hub.hds.models.senha;
 
-import com.hub.hds.models.candidato.Candidato;
 import com.hub.hds.models.usuario.Usuario;
 import jakarta.persistence.*;
 import lombok.*;
@@ -22,19 +21,18 @@ public class ResetSenha {
     private Long idToken;
 
     @ManyToOne
-    @JoinColumn(name = "id_candidato", nullable = false)
+    @JoinColumn(name = "usuario_id", nullable = false)
     private Usuario usuario;
 
-
-    @Column(nullable = false, unique = true, length = 100)
+    @Column(name = "token", nullable = false, unique = true, length = 100)
     private String token;
 
-    @Column(name = "criado_em")
-    private LocalDateTime criadoEm = LocalDateTime.now();
+    @Column(name = "criado_em", insertable = false, updatable = false)
+    private LocalDateTime criadoEm;
 
-    @Column(name = "expira_em",nullable = false)
+    @Column(name = "expira_em", nullable = false)
     private LocalDateTime expiraEm;
 
     @Column(nullable = false)
-    private boolean utilizado = false;
+    private boolean utilizado;
 }

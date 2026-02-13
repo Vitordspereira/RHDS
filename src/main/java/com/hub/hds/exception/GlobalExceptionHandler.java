@@ -53,14 +53,23 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.UNAUTHORIZED, "Não autenticado", req);
     }
 
-    // 400 (Bean Validation)
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ApiError> validation(MethodArgumentNotValidException ex, HttpServletRequest req) {
-        String msg = ex.getBindingResult().getFieldErrors().stream()
-                .findFirst()
-                .map(e -> e.getField() + ": " + e.getDefaultMessage())
-                .orElse("Dados inválidos");
-        return build(HttpStatus.BAD_REQUEST, msg, req);
+    // 400 - Usuário não encontrado
+    @ExceptionHandler(UsuarioNaoEncontradoException.class)
+    public ResponseEntity<ApiError> usuarioNaoEncontrado(
+            UsuarioNaoEncontradoException ex,
+            HttpServletRequest req
+    ) {
+        return build(HttpStatus.BAD_REQUEST, ex.getMessage(), req);
+    }
+
+
+    // ✅ 409
+    @ExceptionHandler(EmailJaCadastradoException.class)
+    public ResponseEntity<ApiError> emailJaCadastrado(
+            EmailJaCadastradoException ex,
+            HttpServletRequest req
+    ) {
+        return build(HttpStatus.CONFLICT, ex.getMessage(), req);
     }
 
     // 500

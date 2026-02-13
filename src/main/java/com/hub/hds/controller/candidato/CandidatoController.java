@@ -1,9 +1,8 @@
 package com.hub.hds.controller.candidato;
 
-import com.hub.hds.dto.candidato.CandidatoCadastroDTO;
-import com.hub.hds.dto.candidato.CandidatoResponse;
-import com.hub.hds.dto.candidato.CandidatoCompletoResponse;
-import com.hub.hds.dto.candidato.CandidatoUpdateDTO;
+import com.hub.hds.dto.candidato.CandidatoCadastroRequest;
+import com.hub.hds.dto.candidato.CandidatoCadastroResponse;
+import com.hub.hds.dto.dashboardEmpresa.candidato.CandidatoPerfilDTO;
 import com.hub.hds.service.candidato.CandidatoService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -11,8 +10,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
-@CrossOrigin(origins = "*")
 @RestController
 @RequestMapping("/candidatos")
 public class CandidatoController {
@@ -23,48 +22,56 @@ public class CandidatoController {
         this.candidatoService = candidatoService;
     }
 
-
-    // CADASTRO INICIAL (COM LOGIN)
-    @PostMapping("/cadastro")
-    public ResponseEntity<CandidatoResponse> cadastrar(
-            @RequestBody @Valid CandidatoCadastroDTO request
+    @PostMapping
+    public ResponseEntity<Map<String, Object>> cadastrar(
+            @Valid @RequestBody CandidatoCadastroRequest request
     ) {
-        CandidatoResponse response = candidatoService.cadastrar(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        Long candidatoId = candidatoService.cadastrar(request);
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(
+                Map.of(
+                        "message", "Candidato cadastrado com sucesso",
+                        "candidatoId", candidatoId
+                )
+        );
     }
 
-    // LISTAR TODOS (BÁSICO)
-    @GetMapping
-    public ResponseEntity<List<CandidatoResponse>> listarTodos() {
-        List<CandidatoResponse> lista = candidatoService.listarTodos();
-        return ResponseEntity.ok(lista);
+    @GetMapping("/me")
+    public ResponseEntity<List<CandidatoCadastroResponse>> listar() {
+        return ResponseEntity.ok(candidatoService.listar());
     }
 
-    // BUSCAR CANDIDATO COMPLETO
-    @GetMapping("/{id}")
-    public ResponseEntity<CandidatoCompletoResponse> buscarCompleto(
+    @GetMapping("/me/{id}")
+    public ResponseEntity<CandidatoPerfilDTO> buscarPorId(
             @PathVariable Long id
     ) {
-        CandidatoCompletoResponse response =
-                candidatoService.buscarCompleto(id);
-        return ResponseEntity.ok(response);
+        CandidatoPerfilDTO candidato = candidatoService.buscarPorId(id);
+        return ResponseEntity.ok(candidato);
     }
 
-    // ATUALIZAR PERFIL
+
     @PutMapping("/{id}")
-    public ResponseEntity<CandidatoResponse> atualizar(
+    public ResponseEntity<Map<String, String>> atualizar(
             @PathVariable Long id,
-            @RequestBody @Valid CandidatoUpdateDTO request
+            @Valid @RequestBody CandidatoCadastroRequest request
     ) {
-        CandidatoResponse response =
-                candidatoService.atualizar(id, request);
-        return ResponseEntity.ok(response);
+        candidatoService.atualizar(id, request);
+
+        return ResponseEntity.ok(
+                Map.of("message", "Candidato atualizado com sucesso")
+        );
     }
 
-    // DELETAR
+
     @DeleteMapping("/{id}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deletar(@PathVariable Long id) {
+    public ResponseEntity<Map<String, String>> deletar(@PathVariable Long id) {
+
         candidatoService.deletar(id);
+
+        return ResponseEntity.ok(
+                Map.of("message", "Candidato removido com sucesso")
+        );
     }
 }
+
+

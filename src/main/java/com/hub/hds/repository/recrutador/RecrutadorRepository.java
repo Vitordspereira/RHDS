@@ -7,5 +7,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.Optional;
 
 public interface RecrutadorRepository extends JpaRepository<Recrutador, Long> {
-    Optional<Recrutador> findByUsuario(Usuario usuario);
+
+        Optional<Recrutador> findByUsuario(Usuario usuario);
+
+        Optional<Recrutador> findByUsuario_Email(String email);
+
 }

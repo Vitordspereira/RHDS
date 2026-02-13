@@ -1,55 +1,58 @@
 package com.hub.hds.service.candidato;
 
-import com.hub.hds.dto.candidato.CandidatoCadastroDTO;
-import com.hub.hds.dto.candidato.CandidatoResponse;
-import com.hub.hds.dto.candidato.CandidatoCompletoResponse;
-import com.hub.hds.dto.candidato.CandidatoUpdateDTO;
-import com.hub.hds.dto.experiencia.ExperienciaResponse;
-import com.hub.hds.dto.formacao.FormacaoResponse;
+import com.hub.hds.dto.candidato.CandidatoCadastroRequest;
+import com.hub.hds.dto.candidato.CandidatoCadastroResponse;
+import com.hub.hds.dto.candidato.ExperienciaRequest;
+import com.hub.hds.dto.candidato.FormacaoRequest;
+import com.hub.hds.dto.dashboardCandidato.ExperienciaDTO;
+import com.hub.hds.dto.dashboardCandidato.FormacaoDTO;
+import com.hub.hds.dto.dashboardEmpresa.candidato.CandidatoPerfilDTO;
 import com.hub.hds.models.candidato.Candidato;
+import com.hub.hds.models.candidato.Experiencia;
+import com.hub.hds.models.candidato.Formacao;
 import com.hub.hds.models.usuario.Role;
 import com.hub.hds.models.usuario.Usuario;
 import com.hub.hds.repository.candidato.CandidatoRepository;
-import com.hub.hds.service.usuario.UsuarioService;
-import jakarta.transaction.Transactional;
+import com.hub.hds.repository.usuario.UsuarioRepository;
+import org.springframework.http.HttpStatus;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
 @Service
-@Transactional
 public class CandidatoService {
 
+    private final UsuarioRepository usuarioRepository;
     private final CandidatoRepository candidatoRepository;
-    private final UsuarioService usuarioService;
+    private final PasswordEncoder passwordEncoder;
 
     public CandidatoService(
+            UsuarioRepository usuarioRepository,
             CandidatoRepository candidatoRepository,
-            UsuarioService usuarioService
+            PasswordEncoder passwordEncoder
     ) {
+        this.usuarioRepository = usuarioRepository;
         this.candidatoRepository = candidatoRepository;
-        this.usuarioService = usuarioService;
+        this.passwordEncoder = passwordEncoder;
     }
 
-    // CADASTRO INICIAL (COM LOGIN)
-    public CandidatoResponse cadastrar(CandidatoCadastroDTO request) {
+    // CREATE
+    @Transactional
+    public Long cadastrar(CandidatoCadastroRequest request) {
 
-        // 1️⃣ CRIA USUÁRIO (LOGIN)
-        Usuario usuario = usuarioService.criarUsuario(
-                request.email(),
-                request.senha(),
-                Role.CANDIDATO
-        );
-
-        String telefoneLimpo = request.telefone()
-                .replaceAll("\\D", "");
-
-    // CRIAR CANDIDATO
+        Usuario usuario = new Usuario();
+        usuario.setEmail(request.email());
+        usuario.setSenha(passwordEncoder.encode(request.senha()));
+        usuario.setRole(Role.CANDIDATO);
+        usuarioRepository.save(usuario);
 
         Candidato candidato = Candidato.builder()
                 .nomeCompleto(request.nomeCompleto())
-                .telefone(request.telefone())
                 .cpf(request.cpf())
+                .telefone(request.telefone())
                 .genero(request.genero())
                 .dataNascimento(request.dataNascimento())
                 .cidade(request.cidade())
@@ -57,122 +60,170 @@ public class CandidatoService {
                 .usuario(usuario)
                 .build();
 
-        candidatoRepository.save(candidato);
+        if (request.experiencias() != null) {
+            for (ExperienciaRequest expReq : request.experiencias()) {
+                Experiencia exp = Experiencia.builder()
+                        .empresa(expReq.empresa())
+                        .cargo(expReq.cargo())
+                        .descricao(expReq.descricao())
+                        .dataInicio(expReq.dataInicio())
+                        .dataFim(expReq.dataFim())
+                        .atual(expReq.atual())
+                        .candidato(candidato)
+                        .build();
+                candidato.getExperiencias().add(exp);
+            }
+        }
 
-        return mapBasico(candidato);
+        if (request.formacoes() != null) {
+            for (FormacaoRequest formReq : request.formacoes()) {
+                Formacao form = Formacao.builder()
+                        .instituicao(formReq.instituicao())
+                        .curso(formReq.curso())
+                        .nivelFormacao(formReq.nivelFormacao())
+                        .statusFormacao(formReq.statusFormacao())
+                        .dataInicio(formReq.dataInicio())
+                        .dataFim(formReq.dataFim())
+                        .candidato(candidato)
+                        .build();
+                candidato.getFormacoes().add(form);
+            }
+        }
+
+        candidatoRepository.save(candidato);
+        return candidato.getIdCandidato();
     }
 
-    // ATUALIZAR CANDIDATO
-    public CandidatoResponse atualizar(Long id, CandidatoUpdateDTO request) {
+    //LISTAR POR ID
+    public CandidatoPerfilDTO buscarPorId(Long id) {
+
+        Candidato candidato = candidatoRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Candidato não encontrado"
+                ));
+        return new CandidatoPerfilDTO(
+                candidato.getIdCandidato(),
+                candidato.getNomeCompleto(),
+                candidato.getTelefone(),
+                candidato.getGenero(),
+                candidato.getDataNascimento() != null
+                        ? candidato.getDataNascimento().toString()
+                        : null,
+                candidato.getCidade(),
+                candidato.getEstado(),
+                candidato.getVideoApresentacao(),
+                candidato.getExperiencias()
+                        .stream()
+                        .map(ExperienciaDTO::fromEntity)
+                        .toList(),
+                candidato.getFormacoes()
+                        .stream()
+                        .map(FormacaoDTO::fromEntity)
+                        .toList(),
+                candidato.getVideoApresentacao()
+        );
+
+    }
+    //UPDATE
+    @Transactional
+    public void atualizar(Long id, CandidatoCadastroRequest request) {
 
         Candidato candidato = candidatoRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Candidato não encontrado"));
 
+        candidato.setNomeCompleto(request.nomeCompleto());
+        candidato.setCpf(request.cpf());
+        candidato.setTelefone(request.telefone());
+        candidato.setGenero(request.genero());
+        candidato.setDataNascimento(request.dataNascimento());
+        candidato.setCidade(request.cidade());
+        candidato.setEstado(request.estado());
 
-        if (request.nomeCompleto() != null) {
-            candidato.setNomeCompleto(request.nomeCompleto());
+        candidato.getExperiencias().clear();
+        if (request.experiencias() != null) {
+            for (ExperienciaRequest expReq : request.experiencias()) {
+                Experiencia exp = Experiencia.builder()
+                        .empresa(expReq.empresa())
+                        .cargo(expReq.cargo())
+                        .descricao(expReq.descricao())
+                        .dataInicio(expReq.dataInicio())
+                        .dataFim(expReq.dataFim())
+                        .atual(expReq.atual())
+                        .candidato(candidato)
+                        .build();
+                candidato.getExperiencias().add(exp);
+            }
         }
 
-        if (request.telefone() != null) {
-            String telefoneLimpo = request.telefone()
-                    .replaceAll("\\D", "");
-            candidato.setTelefone(telefoneLimpo);
+        candidato.getFormacoes().clear();
+        if (request.formacoes() != null) {
+            for (FormacaoRequest formReq : request.formacoes()) {
+                Formacao form = Formacao.builder()
+                        .instituicao(formReq.instituicao())
+                        .curso(formReq.curso())
+                        .nivelFormacao(formReq.nivelFormacao())
+                        .statusFormacao(formReq.statusFormacao())
+                        .dataInicio(formReq.dataInicio())
+                        .dataFim(formReq.dataFim())
+                        .candidato(candidato)
+                        .build();
+                candidato.getFormacoes().add(form);
+            }
         }
 
-        if (request.genero() != null) {
-            candidato.setGenero(request.genero());
-        }
-
-        if (request.cidade() != null) {
-            candidato.setCidade(request.cidade());
-        }
-
-        if (request.estado() != null) {
-            candidato.setEstado(request.estado());
-        }
-
-        return mapBasico(candidato);
+        candidatoRepository.save(candidato);
     }
 
-    // DELETAR
+    //DELETE
+    @Transactional
     public void deletar(Long id) {
+
+        if (!candidatoRepository.existsById(id)) {
+            throw new RuntimeException("Candidato não encontrado");
+        }
+
         candidatoRepository.deleteById(id);
     }
 
-    // LISTAR TODOS
-    public List<CandidatoResponse> listarTodos() {
+    // =========================
+    // READ - LISTAR
+    // =========================
+    public List<CandidatoCadastroResponse> listar() {
         return candidatoRepository.findAll()
                 .stream()
-                .map(this::mapBasico)
+                .map(CandidatoCadastroResponse::new)
                 .toList();
     }
 
-    // BUSCAR CANDIDATO COMPLETO
-    public CandidatoCompletoResponse buscarCompleto(Long id) {
+    @Transactional(readOnly = true)
+    public CandidatoPerfilDTO buscarPerfilProfissional(Long idCandidato) {
 
-        Candidato candidato = candidatoRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Candidato não encontrado"));
+        Candidato candidato = candidatoRepository.findById(idCandidato)
+                .orElseThrow(() ->
+                        new RuntimeException("Candidato não encontrado")
+                );
 
-        return mapCompleto(candidato);
-    }
-
-    // DTO BÁSICO (SEM EXPERIÊNCIAS E FORMACAO)
-    private CandidatoResponse mapBasico(Candidato candidato) {
-        return new CandidatoResponse(
+        return new CandidatoPerfilDTO(
                 candidato.getIdCandidato(),
                 candidato.getNomeCompleto(),
-                candidato.getUsuario().getEmail(),
                 candidato.getTelefone(),
-                candidato.getCpf(),
                 candidato.getGenero(),
-                candidato.getDataNascimento(),
-                candidato.getCidade(),
-                candidato.getEstado()
-        );
-    }
-
-    // DTO COMPLETO (COM EXPERIÊNCIAS E FORMAÇÃO)
-    private CandidatoCompletoResponse mapCompleto(Candidato candidato) {
-        return new CandidatoCompletoResponse(
-                candidato.getIdCandidato(),
-                candidato.getNomeCompleto(),
-                candidato.getUsuario().getEmail(),
-                candidato.getTelefone(),
-                candidato.getCpf(),
-                candidato.getGenero(),
-                candidato.getDataNascimento(),
+                candidato.getDataNascimento() != null
+                        ? candidato.getDataNascimento().toString()
+                        : null,
                 candidato.getCidade(),
                 candidato.getEstado(),
-
-                //EXPERIENCIA
+                candidato.getVideoApresentacao(),
                 candidato.getExperiencias()
                         .stream()
-                        .map(e -> new ExperienciaResponse(
-                                e.getIdExperiencia(),
-                                e.getNomeEmpresa(),
-                                e.getFuncao(),
-                                e.getDescricao(),
-                                e.getOutrasExperiencias(),
-                                e.getHabilidades(),
-                                e.getPeriodoInicio(),
-                                e.getPeriodoFim()
-                        ))
+                        .map(ExperienciaDTO::fromEntity)
                         .toList(),
-
-                //FORMAÇÃO
                 candidato.getFormacoes()
                         .stream()
-                        .map(f-> new FormacaoResponse(
-                                f.getIdFormacao(),
-                                f.getNomeCurso(),
-                                f.getInstituicao(),
-                                f.getStatus(),
-                                f.getPeriodoInicio(),
-                                f.getPeriodoFim()
-                        ))
-                        .toList()
+                        .map(FormacaoDTO::fromEntity)
+                        .toList(),
+                candidato.getVideoApresentacao()
         );
     }
 }
-
-
