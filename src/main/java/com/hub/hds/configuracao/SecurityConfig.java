@@ -11,10 +11,13 @@ import org.springframework.security.config.Customizer;
 public class SecurityConfig {
 
     @Bean
-    SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                .cors(Customizer.withDefaults()) // ✅ ESSENCIAL
-                .csrf(csrf -> csrf.disable());
+                .csrf(csrf -> csrf.disable()) // Desabilita CSRF (necessário para APIs)
+                .authorizeHttpRequests(auth -> auth
+                        .anyRequest().permitAll() // Libera tudo temporariamente para testar
+                )
+                .httpBasic(Customizer.withDefaults()); // Usa autenticação de dados, não de página
 
         return http.build();
     }
