@@ -34,7 +34,5 @@ Modelagem relacional com as seguintes principais tabelas:
 - vaga_localizacao
 - vaga_requisitos
 
-Script disponível em: /database/schema.sql
-
 ## 🔐 Autenticação
 Sistema baseado em JWT com controle de roles (EMPRESA / CANDIDATO).

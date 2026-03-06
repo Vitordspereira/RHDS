@@ -590,7 +590,7 @@ Alerta de vagas
 //GET - http://localhost:8080/alerta/cancelar?token={colocar token aqui}
 
 Pre-Candidatura
-
+ 
 Iniciar pré-candidatura
 ## POST - /pre-candidaturas/{idVaga}
 
