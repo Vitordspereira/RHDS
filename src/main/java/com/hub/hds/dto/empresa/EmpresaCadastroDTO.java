@@ -8,6 +8,6 @@ public record EmpresaCadastroDTO(
         String ramo,
         Boolean possuiFiliais,
         List<UnidadeEmpresaDTO> unidade,
-        RecrutadorDTO recrutador
+        RecrutadorDTO recrutadorDTO
 ) {
 }

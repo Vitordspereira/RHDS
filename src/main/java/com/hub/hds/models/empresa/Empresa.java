@@ -16,7 +16,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Empresa {
+public class  Empresa {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -38,10 +38,10 @@ public class Empresa {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    @OneToMany(mappedBy = "empresa", fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "empresa", cascade = CascadeType.ALL,fetch = FetchType.LAZY)
     private List<UnidadeEmpresa> unidadeEmpresas;
 
-    @OneToMany(mappedBy = "empresa", fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "empresa", cascade = CascadeType.ALL,fetch = FetchType.LAZY)
     private List<Recrutador> recrutadores;
 
     @PrePersist

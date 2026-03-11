@@ -8,33 +8,31 @@ import com.hub.hds.models.usuario.Role;
 import com.hub.hds.models.usuario.Usuario;
 import com.hub.hds.repository.empresa.EmpresaRepository;
 import com.hub.hds.repository.recrutador.RecrutadorRepository;
-import com.hub.hds.repository.unidadeEmpresa.UnidadeEmpresaRepository;
 import com.hub.hds.repository.usuario.UsuarioRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class EmpresaService {
 
     private final EmpresaRepository empresaRepository;
     private final RecrutadorRepository recrutadorRepository;
-    private final UnidadeEmpresaRepository unidadeEmpresaRepository;
     private final UsuarioRepository usuarioRepository;
     private final PasswordEncoder passwordEncoder;
 
     public EmpresaService(
             EmpresaRepository empresaRepository,
             RecrutadorRepository recrutadorRepository,
-            UnidadeEmpresaRepository unidadeEmpresaRepository,
             UsuarioRepository usuarioRepository,
             PasswordEncoder passwordEncoder
     ) {
         this.empresaRepository = empresaRepository;
         this.recrutadorRepository = recrutadorRepository;
-        this.unidadeEmpresaRepository = unidadeEmpresaRepository;
         this.usuarioRepository = usuarioRepository;
         this.passwordEncoder = passwordEncoder;
     }
@@ -45,14 +43,15 @@ public class EmpresaService {
     @Transactional
     public void cadastrarEmpresa(EmpresaCadastroDTO dto) {
 
-        // 1️⃣ Criar USUÁRIO (LOGIN)
+        // 1️⃣ Criar USUÁRIO
+        // IMPORTANTE: Usei dto.recrutadorDTO() porque é como está no seu DTO/JSON do Front
         Usuario usuario = Usuario.builder()
-                .email(dto.recrutador().emailCorporativo())
-                .senha(passwordEncoder.encode(dto.recrutador().senha()))
+                .email(dto.recrutadorDTO().emailCorporativo())
+                .senha(passwordEncoder.encode(dto.recrutadorDTO().senha()))
                 .role(Role.RECRUTADOR)
                 .build();
 
-        usuarioRepository.saveAndFlush(usuario);
+        usuario = usuarioRepository.save(usuario); // Guardamos o usuário salvo
 
         // 2️⃣ Criar EMPRESA
         Empresa empresa = Empresa.builder()
@@ -62,38 +61,35 @@ public class EmpresaService {
                 .possuiFiliais(dto.possuiFiliais())
                 .build();
 
-        empresaRepository.save(empresa);
-
-        // 3️⃣ Criar RECRUTADOR
+        // 3️⃣ Criar RECRUTADOR (Vinculando os objetos)
         Recrutador recrutador = Recrutador.builder()
-                .nome(dto.recrutador().nome())
-                .emailCorporativo(dto.recrutador().emailCorporativo())
-                .telefone(dto.recrutador().telefone())
-                .empresa(empresa)
-                .usuario(usuario)
+                .nome(dto.recrutadorDTO().nome())
+                .emailCorporativo(dto.recrutadorDTO().emailCorporativo())
+                .telefone(dto.recrutadorDTO().telefone())
+                .empresa(empresa) // Vincula empresa
+                .usuario(usuario) // Vincula usuário
                 .build();
 
-        recrutadorRepository.save(recrutador);
-
-        // 4️⃣ Criar UNIDADES DA EMPRESA
-        List<com.hub.hds.dto.empresa.UnidadeEmpresaDTO> unidades =
-                dto.unidade();
-
-        if (unidades == null || unidades.isEmpty()) {
-            throw new RuntimeException(
-                    "A empresa deve possuir ao menos uma unidade (MATRIZ)."
-            );
+        // 4️⃣ Preparar as UNIDADES
+        if (dto.unidade() == null || dto.unidade().isEmpty()) {
+            throw new RuntimeException("A empresa deve possuir ao menos uma unidade (MATRIZ).");
         }
 
-        for (com.hub.hds.dto.empresa.UnidadeEmpresaDTO unidadeDTO : unidades) {
-            UnidadeEmpresa unidade = UnidadeEmpresa.builder()
-                    .empresa(empresa)
-                    .tipoUnidade(unidadeDTO.tipoUnidade())
-                    .numeroFuncionarios(unidadeDTO.numeroFuncionarios())
-                    .build();
+        List<UnidadeEmpresa> unidades = dto.unidade().stream().map(uDto ->
+                UnidadeEmpresa.builder()
+                        .empresa(empresa)
+                        .tipoUnidade(uDto.tipoUnidade())
+                        .numeroFuncionarios(uDto.numeroFuncionarios())
+                        .build()
+        ).collect(Collectors.toList());
 
-            unidadeEmpresaRepository.save(unidade);
-        }
+        // 5️⃣ O PULO DO GATO: Como você usou CascadeType.ALL nas Entities,
+        // basta setar as listas na empresa e salvar a EMPRESA UMA VEZ SÓ.
+        empresa.setRecrutadores(Collections.singletonList(recrutador));
+        empresa.setUnidadeEmpresas(unidades);
+
+        empresaRepository.save(empresa);
+        // Com o Cascade, o save acima vai salvar a Empresa, o Recrutador e as Unidades de uma vez!
     }
 
     public Long buscarIdEmpresaPorEmail(String email) {
