@@ -36,3 +36,6 @@ Modelagem relacional com as seguintes principais tabelas:
 
 ## 🔐 Autenticação
 Sistema baseado em JWT com controle de roles (EMPRESA / CANDIDATO).
+
+###  👩‍💻  Responsável 
+- **Vitor da Silva Pereira**
