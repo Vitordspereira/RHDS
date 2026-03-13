@@ -1,3 +1,5 @@
+-- tentar arrumar atualizar vagas onde candidato não precise escrever tudo novamente só atualize o que ele deseja
+
 # DOCUMENTAÇÃO DA API — HUB HDS
 
 ## BASE URL

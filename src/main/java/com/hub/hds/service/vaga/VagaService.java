@@ -17,12 +17,13 @@ import com.hub.hds.repository.unidadeEmpresa.UnidadeEmpresaRepository;
 import com.hub.hds.repository.vaga.VagaRepository;
 import com.hub.hds.service.EmailService;
 import com.hub.hds.service.alerta.AlertaService;
-import com.hub.hds.service.processoSeletivo.ProcessoSeletivoService;
+import org.jspecify.annotations.NonNull;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.ObjectMapper;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -36,7 +37,6 @@ public class VagaService {
     private final RecrutadorRepository recrutadorRepository;
     private final VagaMapper vagaMapper;
     private final AlertaService alertaService;
-    private final ProcessoSeletivoService processoSeletivoService;
     private final CandidaturaRepository candidaturaRepository;
     private final EmailService emailService;
 
@@ -46,7 +46,6 @@ public class VagaService {
             RecrutadorRepository recrutadorRepository,
             ObjectMapper objectMapper,
             AlertaService alertaService,
-            ProcessoSeletivoService processoSeletivoService,
             CandidaturaRepository candidaturaRepository,
             EmailService emailService
     ) {
@@ -55,7 +54,6 @@ public class VagaService {
         this.recrutadorRepository = recrutadorRepository;
         this.vagaMapper = new VagaMapper(objectMapper);
         this.alertaService = alertaService;
-        this.processoSeletivoService = processoSeletivoService;
         this.candidaturaRepository = candidaturaRepository;
         this.emailService = emailService;
     }
@@ -316,24 +314,32 @@ public class VagaService {
     /* =====================
        CLASSIFICAÇÃO (ENUM)
        ===================== */
-        vaga.setModalidadeVaga(
-                ModalidadeVaga.valueOf(vagaUpdateDTO.modalidadeVaga().name())
-        );
+        if (vagaUpdateDTO.modalidadeVaga() != null) {
+            vaga.setModalidadeVaga(
+                    ModalidadeVaga.valueOf(vagaUpdateDTO.modalidadeVaga().name())
+            );
+        }
 
-        vaga.setTipoContrato(
-                TipoContrato.valueOf(vagaUpdateDTO.tipoContrato().name())
-        );
+        if (vagaUpdateDTO.tipoContrato() != null) {
+            vaga.setTipoContrato(
+                    TipoContrato.valueOf(vagaUpdateDTO.tipoContrato().name())
+            );
+        }
 
-        vaga.setCategoriaVaga(
-                CategoriaVaga.valueOf(vagaUpdateDTO.categoriaVaga().name())
-        );
+        if (vagaUpdateDTO.categoriaVaga() != null) {
+            vaga.setCategoriaVaga(
+                    CategoriaVaga.valueOf(vagaUpdateDTO.categoriaVaga().name())
+            );
+        }
 
     /* =====================
        SALÁRIO
        ===================== */
-        vaga.setSalarioTipo(
-                SalarioTipo.valueOf(vagaUpdateDTO.salarioTipo().name())
-        );
+        if (vagaUpdateDTO.salarioTipo() != null) {
+            vaga.setSalarioTipo(
+                    SalarioTipo.valueOf(vagaUpdateDTO.salarioTipo().name())
+            );
+        }
         vaga.setSalarioValor(vagaUpdateDTO.salarioValor());
 
     /* =====================
@@ -373,17 +379,26 @@ public class VagaService {
        OUTROS
        ===================== */
         vaga.setObservacoes(vagaUpdateDTO.observacoes());
-        vaga.setContratacaoUrgente(vagaUpdateDTO.contratacaoUrgente());
+        vaga.setContratacaoUrgente(
+                vagaUpdateDTO.contratacaoUrgente() != null
+                        ? vagaUpdateDTO.contratacaoUrgente()
+                        : false
+        );
         vaga.setDataPublicacao(vagaUpdateDTO.dataPublicacao());
 
     /* =====================
        ONE TO ONE — FORMAÇÃO
        ===================== */
         if (vagaUpdateDTO.formacao() != null) {
-            VagaFormacao formacao = new VagaFormacao();
+            VagaFormacao formacao = vaga.getVagaFormacao();
+
+            if (formacao == null) {
+                formacao = new VagaFormacao();
+                formacao.setVaga(vaga);
+            }
+
             formacao.setEscolaridade(vagaUpdateDTO.formacao().escolaridade());
             formacao.setExperienciaDescricao(vagaUpdateDTO.formacao().experienciaDescricao());
-            formacao.setVaga(vaga);
 
             vaga.setVagaFormacao(formacao);
         } else {
@@ -394,13 +409,7 @@ public class VagaService {
        ONE TO ONE — REQUISITOS
        ===================== */
         if (vagaUpdateDTO.requisitos() != null) {
-            VagaRequisitos requisitos = new VagaRequisitos();
-            requisitos.setHabilitacao(vagaUpdateDTO.requisitos().habilitacao());
-            requisitos.setVeiculoProprio(vagaUpdateDTO.requisitos().veiculoProprio());
-            requisitos.setViajar(vagaUpdateDTO.requisitos().viajar());
-            requisitos.setMudarResidencia(vagaUpdateDTO.requisitos().mudarResidencia());
-            requisitos.setObservacoes(vagaUpdateDTO.requisitos().observacao());
-            requisitos.setVaga(vaga);
+            VagaRequisitos requisitos = getVagaRequisitos(vagaUpdateDTO, vaga);
 
             vaga.setRequisitos(requisitos);
         } else {
@@ -410,17 +419,24 @@ public class VagaService {
     /* =====================
        ONE TO MANY — IDIOMAS
        ===================== */
-        vaga.getIdiomas().clear();
+        if (vaga.getIdiomas() == null) {
+            vaga.setIdiomas(new ArrayList<>());
+        } else {
+            vaga.getIdiomas().clear();
+        }
 
         if (vagaUpdateDTO.idiomas() != null) {
             for (VagaIdiomaDTO dtoIdioma : vagaUpdateDTO.idiomas()) {
                 VagaIdioma idioma = new VagaIdioma();
                 idioma.setIdioma(dtoIdioma.idioma());
-                idioma.setNivelIdioma(
-                        NivelIdioma.valueOf(dtoIdioma.nivelIdioma().name())
-                );
-                idioma.setVaga(vaga);
 
+                if (dtoIdioma.nivelIdioma() != null) {
+                    idioma.setNivelIdioma(
+                            NivelIdioma.valueOf(dtoIdioma.nivelIdioma().name())
+                    );
+                }
+
+                idioma.setVaga(vaga);
                 vaga.getIdiomas().add(idioma);
             }
         }
@@ -429,10 +445,15 @@ public class VagaService {
        ONE TO ONE — LOCALIZAÇÃO
        ===================== */
         if (vagaUpdateDTO.localizacao() != null) {
-            VagaLocalizacao localizacao = new VagaLocalizacao();
+            VagaLocalizacao localizacao = vaga.getLocalizacao();
+
+            if (localizacao == null) {
+                localizacao = new VagaLocalizacao();
+                localizacao.setVaga(vaga);
+            }
+
             localizacao.setCidade(vagaUpdateDTO.localizacao().cidade());
             localizacao.setEstado(vagaUpdateDTO.localizacao().estado());
-            localizacao.setVaga(vaga);
 
             vaga.setLocalizacao(localizacao);
         } else {
@@ -442,27 +463,51 @@ public class VagaService {
     /* =====================
        ONE TO MANY — CNH
        ===================== */
-        vaga.getCnhs().clear();
+        if (vaga.getCnhs() == null) {
+            vaga.setCnhs(new ArrayList<>());
+        } else {
+            vaga.getCnhs().clear();
+        }
 
         if (vagaUpdateDTO.cnhs() != null) {
             for (VagaCnhDTO vagaCnhDTO : vagaUpdateDTO.cnhs()) {
-
                 VagaCnh cnh = new VagaCnh();
 
-                cnh.setCategoriaCnh(
-                        CategoriaCnh.valueOf(vagaCnhDTO.tipoCnh().name())
-                );
+                if (vagaCnhDTO.tipoCnh() != null) {
+                    cnh.setCategoriaCnh(
+                            CategoriaCnh.valueOf(vagaCnhDTO.tipoCnh().name())
+                    );
+                }
 
                 cnh.setVaga(vaga);
                 vaga.getCnhs().add(cnh);
             }
         }
 
-        vagaRepository.save(vaga);
+        Vaga vagaSalva = vagaRepository.save(vaga);
 
-        processoSeletivoService.criarProcesso(vaga);
+        // IMPORTANTE:
+        // Evite recriar processo seletivo toda vez que editar a vaga.
+        // Se esse processo já deve existir desde a criação, remova esta linha do update.
+        // processoSeletivoService.criarProcesso(vagaSalva);
 
-        return VagaListDTO.fromEntity(vaga);
+        return VagaListDTO.fromEntity(vagaSalva);
+    }
+
+    private static @NonNull VagaRequisitos getVagaRequisitos(VagaUpdateDTO vagaUpdateDTO, Vaga vaga) {
+        VagaRequisitos requisitos = vaga.getRequisitos();
+
+        if (requisitos == null) {
+            requisitos = new VagaRequisitos();
+            requisitos.setVaga(vaga);
+        }
+
+        requisitos.setHabilitacao(vagaUpdateDTO.requisitos().habilitacao());
+        requisitos.setVeiculoProprio(vagaUpdateDTO.requisitos().veiculoProprio());
+        requisitos.setViajar(vagaUpdateDTO.requisitos().viajar());
+        requisitos.setMudarResidencia(vagaUpdateDTO.requisitos().mudarResidencia());
+        requisitos.setObservacoes(vagaUpdateDTO.requisitos().observacao());
+        return requisitos;
     }
 
 
