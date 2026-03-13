@@ -46,6 +46,10 @@ public class PreCandidaturaService {
     // =========================
     public PreCandidatura iniciar(Long vagaId, String email) {
 
+        if (email == null || email.isBlank()) {
+            throw new RuntimeException("Informe o e-mail.");
+        }
+
         // 🔐 Bloqueia apenas se houver pré-candidatura ativa
         if (preCandidaturaRepository.existsByEmailAndVaga_IdVagaAndStatusPreCandidatura(
                 email,
@@ -65,18 +69,16 @@ public class PreCandidaturaService {
                 .tokenConfirmacao(UUID.randomUUID().toString())  // Gera o token
                 .statusPreCandidatura(StatusPreCandidatura.INICIADA)
                 .emailLembreteEnviado(false)
+                .tokenEnviado(false)
                 .expiresAt(LocalDateTime.now().plusHours(24))  // Define a expiração do token
                 .build();
 
         pre = preCandidaturaRepository.save(pre);
 
-        // Enviar o token por e-mail
-        if (!pre.isTokenEnviado()) {
-            emailService.enviarTokenPorEmail(email, pre.getTokenConfirmacao());
-            pre.setTokenEnviado(true);
-            preCandidaturaRepository.save(pre);
-        }
-        return pre;
+        emailService.enviarTokenPorEmail(email, pre.getTokenConfirmacao());
+
+        pre.setTokenEnviado(true);
+        return preCandidaturaRepository.save(pre);
     }
 
     // =========================

@@ -49,7 +49,7 @@ public class PreCandidatura {
     @Column(name = "email_lembrete_enviado", nullable = false)
     private Boolean emailLembreteEnviado = false;
 
-    @Column(nullable = false)
+    @Column(name = "token_enviado",nullable = false)
     private boolean tokenEnviado = false;
 
     @Column(name = "created_at", updatable = false)

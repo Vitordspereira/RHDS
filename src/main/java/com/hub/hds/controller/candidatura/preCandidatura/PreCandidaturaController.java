@@ -1,7 +1,6 @@
 package com.hub.hds.controller.candidatura.preCandidatura;
 
 import com.hub.hds.models.candidatura.preCandidatura.PreCandidatura;
-import com.hub.hds.service.EmailService;
 import com.hub.hds.service.candidatura.preCandidatura.PreCandidaturaService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -14,11 +13,9 @@ import java.util.Map;
 public class PreCandidaturaController {
 
     private final PreCandidaturaService preCandidaturaService;
-    private final EmailService emailService;  // Adicionado para enviar os e-mails
 
-    public PreCandidaturaController(PreCandidaturaService preCandidaturaService, EmailService emailService) {
+    public PreCandidaturaController(PreCandidaturaService preCandidaturaService) {
         this.preCandidaturaService = preCandidaturaService;
-        this.emailService = emailService;  // Inicializando o serviço de e-mail
     }
 
     // =========================
@@ -29,14 +26,21 @@ public class PreCandidaturaController {
             @PathVariable Long idVaga,
             @RequestParam String email
     ) {
-        PreCandidatura pre = preCandidaturaService.iniciar(idVaga, email);
+        try {
+            PreCandidatura pre = preCandidaturaService.iniciar(idVaga, email);
 
-        // Retorna o token para o frontend
-        return ResponseEntity.status(HttpStatus.CREATED).body(
-                Map.of(
-                        "token", pre.getTokenConfirmacao()
-                )
-        );
+            // Retorna o token para o frontend
+            return ResponseEntity.status(HttpStatus.CREATED).body(
+                    Map.of(
+                            "token", pre.getTokenConfirmacao(),
+                            "message", "Token gerado e enviado com sucesso"
+                    )
+            );
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                    Map.of("error", e.getMessage())
+            );
+        }
     }
 
     // =========================

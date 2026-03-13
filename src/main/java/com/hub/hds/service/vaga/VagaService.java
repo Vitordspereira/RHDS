@@ -17,7 +17,6 @@ import com.hub.hds.repository.unidadeEmpresa.UnidadeEmpresaRepository;
 import com.hub.hds.repository.vaga.VagaRepository;
 import com.hub.hds.service.EmailService;
 import com.hub.hds.service.alerta.AlertaService;
-import org.jspecify.annotations.NonNull;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.ObjectMapper;
@@ -409,7 +408,18 @@ public class VagaService {
        ONE TO ONE — REQUISITOS
        ===================== */
         if (vagaUpdateDTO.requisitos() != null) {
-            VagaRequisitos requisitos = getVagaRequisitos(vagaUpdateDTO, vaga);
+            VagaRequisitos requisitos = vaga.getRequisitos();
+
+            if (requisitos == null) {
+                requisitos = new VagaRequisitos();
+                requisitos.setVaga(vaga);
+            }
+
+            requisitos.setHabilitacao(vagaUpdateDTO.requisitos().habilitacao());
+            requisitos.setVeiculoProprio(vagaUpdateDTO.requisitos().veiculoProprio());
+            requisitos.setViajar(vagaUpdateDTO.requisitos().viajar());
+            requisitos.setMudarResidencia(vagaUpdateDTO.requisitos().mudarResidencia());
+            requisitos.setObservacoes(vagaUpdateDTO.requisitos().observacao());
 
             vaga.setRequisitos(requisitos);
         } else {
@@ -492,22 +502,6 @@ public class VagaService {
         // processoSeletivoService.criarProcesso(vagaSalva);
 
         return VagaListDTO.fromEntity(vagaSalva);
-    }
-
-    private static @NonNull VagaRequisitos getVagaRequisitos(VagaUpdateDTO vagaUpdateDTO, Vaga vaga) {
-        VagaRequisitos requisitos = vaga.getRequisitos();
-
-        if (requisitos == null) {
-            requisitos = new VagaRequisitos();
-            requisitos.setVaga(vaga);
-        }
-
-        requisitos.setHabilitacao(vagaUpdateDTO.requisitos().habilitacao());
-        requisitos.setVeiculoProprio(vagaUpdateDTO.requisitos().veiculoProprio());
-        requisitos.setViajar(vagaUpdateDTO.requisitos().viajar());
-        requisitos.setMudarResidencia(vagaUpdateDTO.requisitos().mudarResidencia());
-        requisitos.setObservacoes(vagaUpdateDTO.requisitos().observacao());
-        return requisitos;
     }
 
 

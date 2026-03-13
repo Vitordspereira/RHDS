@@ -36,41 +36,53 @@ public class EmailService {
         } catch (Exception e) {
             System.err.println("ERRO AO ENVIAR EMAIL PARA: " + para);
             e.printStackTrace();
+            throw new RuntimeException("Falha ao enviar e-mail.", e);
         }
     }
 
     // =========================
-    // EMAIL: ENVIAR TOKEN PARA CONFIRMAÇÃO DE CANDIDATURA
+    // 1️⃣ ENVIAR TOKEN PARA CONFIRMAÇÃO DE CANDIDATURA
     // =========================
     public void enviarTokenPorEmail(String email, String token) {
         String assunto = "Token de confirmação para sua candidatura";
-        String texto =
-                "Olá!\n\n" +
-                        "Para confirmar sua candidatura, use o seguinte token: " + token + "\n\n";
-        enviarEmail(email, assunto, texto);  // Envia o e-mail com o token
+
+        String texto = """
+                <p>Olá!</p>
+                <p>Para confirmar sua candidatura, use o seguinte token:</p>
+                <p><strong>%s</strong></p>
+                <p>Esse token expira em 24 horas.</p>
+                """.formatted(token);
+
+        enviarEmail(email, assunto, texto);
     }
 
     // =========================
-    // EMAIL: CONFIRMAÇÃO DE CANDIDATURA REALIZADA COM SUCESSO
+    // 2️⃣ CONFIRMAÇÃO DE CANDIDATURA
     // =========================
     public void enviarConfirmacaoCandidatura(String email, Vaga vaga) {
         String assunto = "Candidatura realizada com sucesso!";
-        String texto =
-                "Sua candidatura para a vaga \"" + vaga.getTituloFinal() + "\" foi realizada com sucesso.\n\n" +
-                        "Acompanhe as próximas etapas pelo seu perfil.";
-        enviarEmail(email, assunto, texto);  // Envia o e-mail de confirmação de candidatura
+
+        String texto = """
+                <p>Olá!</p>
+                <p>Sua candidatura para a vaga <strong>%s</strong> foi realizada com sucesso.</p>
+                <p>Acompanhe as próximas etapas pelo seu perfil.</p>
+                """.formatted(vaga.getTituloFinal());
+
+        enviarEmail(email, assunto, texto);
     }
 
     // =========================
-    // 3️⃣ LEMBRETE DE INTERESSE (ESTAVA FALTANDO)
+    // 3️⃣ LEMBRETE DE INTERESSE
     // =========================
     public void enviarLembreteInteresse(String email, Vaga vaga) {
         String assunto = "Você ainda tem interesse nesta vaga?";
-        String texto =
-                "<p>Olá!</p>" +
-                        "<p>Notamos que você iniciou uma candidatura para a vaga:</p>" +
-                        "<p><strong>" + vaga.getTituloFinal() + "</strong></p>" +
-                        "<p>Caso ainda tenha interesse, acesse seu perfil e finalize a candidatura.</p>";
+
+        String texto = """
+                <p>Olá!</p>
+                <p>Notamos que você iniciou uma candidatura para a vaga:</p>
+                <p><strong>%s</strong></p>
+                <p>Caso ainda tenha interesse, acesse seu perfil e finalize a candidatura.</p>
+                """.formatted(vaga.getTituloFinal());
 
         enviarEmail(email, assunto, texto);
     }
@@ -81,22 +93,27 @@ public class EmailService {
 
         String corpo = """
                 Olá!
-
+                
                 A vaga "%s" foi encerrada pela empresa.
-
+                
                 Agradecemos sua candidatura e desejamos sucesso nos próximos processos seletivos.
-
+                
                 Atenciosamente,
                 RHDS
                 """.formatted(vaga.getCargo());
 
         for (String email : emails) {
-            SimpleMailMessage msg = new SimpleMailMessage();
-            msg.setTo(email);
-            msg.setSubject(assunto);
-            msg.setText(corpo);
+            try {
+                SimpleMailMessage msg = new SimpleMailMessage();
+                msg.setTo(email);
+                msg.setSubject(assunto);
+                msg.setText(corpo);
 
-            mailSender.send(msg);
+                mailSender.send(msg);
+            } catch (Exception e) {
+                System.err.println("Erro ao notificar vaga encerrada para: " + email);
+                e.printStackTrace();
+            }
         }
     }
 }
