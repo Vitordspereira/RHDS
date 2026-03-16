@@ -24,83 +24,67 @@ public class VagaController {
         this.vagaService = vagaService;
     }
 
-    /* =====================================================
-       CRIAR VAGA
-       ===================================================== */
     @PostMapping
     public ResponseEntity<VagaCreateResponseDTO> criar(
             @Valid @RequestBody VagaCreateDTO vagaCreateDTO,
             @AuthenticationPrincipal String emailUsuario
     ) {
-
         Long idVaga = vagaService.criar(vagaCreateDTO, emailUsuario);
-
         return ResponseEntity
                 .status(HttpStatus.CREATED)
-                .body(new VagaCreateResponseDTO(
-                        idVaga,
-                        "Vaga criada com sucesso"
-                ));
+                .body(new VagaCreateResponseDTO(idVaga, "Vaga criada com sucesso"));
     }
 
-    /* =====================================================
-       LISTAR VAGAS (PÚBLICO)
-       ===================================================== */
-
     @GetMapping("/me")
-    public ResponseEntity<List<VagaListDTO>> buscar() {
-        List<VagaListDTO> vagas = vagaService.listar();
-        return ResponseEntity.ok(vagas);
+    public ResponseEntity<List<VagaListDTO>> buscarMinhas(@AuthenticationPrincipal String emailUsuario) {
+        return ResponseEntity.ok(vagaService.listarDoRecrutador(emailUsuario));
     }
 
     @GetMapping("/me/{idVaga}")
-    public ResponseEntity<VagaListDTO> buscarPorId(
-            @PathVariable Long idVaga
+    public ResponseEntity<VagaListDTO> buscarPorIdDoRecrutador(
+            @PathVariable Long idVaga,
+            @AuthenticationPrincipal String emailUsuario
     ) {
-        VagaListDTO vaga = vagaService.buscarPorId(idVaga);
-        return ResponseEntity.ok(vaga);
+        return ResponseEntity.ok(vagaService.buscarPorIdDoRecrutador(idVaga, emailUsuario));
+    }
+
+    @GetMapping("/{idVaga}")
+    public ResponseEntity<VagaListDTO> buscarPublicaPorId(@PathVariable Long idVaga) {
+        return ResponseEntity.ok(vagaService.buscarPorId(idVaga));
     }
 
     @PutMapping("/{idVaga}")
     public ResponseEntity<VagaListDTO> atualizarVaga(
             @PathVariable Long idVaga,
-            @RequestBody VagaUpdateDTO vagaUpdateDTO
+            @RequestBody VagaUpdateDTO vagaUpdateDTO,
+            @AuthenticationPrincipal String emailUsuario
     ) {
-        try {
-            VagaListDTO vagaAtualizada = vagaService.atualizar(idVaga, vagaUpdateDTO);
-            return ResponseEntity.ok(vagaAtualizada);
-
-        } catch (RuntimeException e) {
-            // Caso ocorra algum erro (como vaga não encontrada)
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(null);
-        }
+        return ResponseEntity.ok(vagaService.atualizar(idVaga, vagaUpdateDTO, emailUsuario));
     }
 
     @GetMapping("/list")
-    public List<VagaListDTO> listar(
-            @RequestParam(required = false) CategoriaVaga categoriaVaga
-    ) {
+    public List<VagaListDTO> listar(@RequestParam(required = false) CategoriaVaga categoriaVaga) {
         if (categoriaVaga != null) {
             return vagaService.listarPorCategoria(categoriaVaga);
         }
         return vagaService.listar();
     }
 
-    //Deletar e Encerrar vaga
     @DeleteMapping("/{idVaga}")
-    public ResponseEntity<Void> deletarVaga(@PathVariable Long idVaga) {
-        vagaService.deletarVaga(idVaga); // só deleta se NÃO tiver candidaturas
+    public ResponseEntity<Void> deletarVaga(
+            @PathVariable Long idVaga,
+            @AuthenticationPrincipal String emailUsuario
+    ) {
+        vagaService.deletarVaga(idVaga, emailUsuario);
         return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/{idVaga}/encerrar")
-    public ResponseEntity<Void> encerrarVaga(@PathVariable Long idVaga) {
-        vagaService.encerrarVaga(idVaga); // encerra e notifica candidatos
+    public ResponseEntity<Void> encerrarVaga(
+            @PathVariable Long idVaga,
+            @AuthenticationPrincipal String emailUsuario
+    ) {
+        vagaService.encerrarVaga(idVaga, emailUsuario);
         return ResponseEntity.noContent().build();
     }
-
 }
-
-
-

@@ -17,18 +17,19 @@ public class ProcessoSeletivoService {
 
     private final ProcessoSeletivoRepository processoSeletivoRepository;
 
-    public void criarProcesso (Vaga vaga) {
+    @Transactional
+    public void criarProcesso(Vaga vaga) {
+        if (vaga == null || vaga.getIdVaga() == null) return;
+        if (processoSeletivoRepository.findByVaga_IdVaga(vaga.getIdVaga()).isPresent()) return;
 
         ProcessoSeletivo processoSeletivo = new ProcessoSeletivo();
         processoSeletivo.setVaga(vaga);
 
         processoSeletivoRepository.save(processoSeletivo);
-
         criarEtapas(processoSeletivo);
     }
 
     private void criarEtapas(ProcessoSeletivo processoSeletivo) {
-
         List<String> etapas = List.of(
                 "Inscrição",
                 "Triagem",
@@ -39,22 +40,17 @@ public class ProcessoSeletivoService {
         );
 
         int ordem = 1;
-
         for (String nome : etapas) {
             EtapaProcesso etapaProcesso = new EtapaProcesso();
             etapaProcesso.setNome(nome);
             etapaProcesso.setOrdemProcesso(ordem++);
             etapaProcesso.setProcessoSeletivo(processoSeletivo);
-
             processoSeletivo.getEtapaProcessos().add(etapaProcesso);
         }
     }
 
-
-
     @Transactional(readOnly = true)
     public List<EtapaProcessoDTO> listarEtapas(Long idVaga) {
-
         ProcessoSeletivo processoSeletivo = processoSeletivoRepository
                 .findByVaga_IdVaga(idVaga)
                 .orElseThrow(() -> new RuntimeException("Processo seletivo não encontrado"));
@@ -64,5 +60,4 @@ public class ProcessoSeletivoService {
                 .map(EtapaProcessoDTO::fromEntity)
                 .toList();
     }
-
 }

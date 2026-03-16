@@ -27,7 +27,9 @@ public interface VagaRepository extends JpaRepository<Vaga, Long> {
             @Param("cidade") String cidade
     );
 
+    List<Vaga> findByCategoriaVaga(CategoriaVaga categoriaVaga);
 
-        List<Vaga> findByCategoriaVaga(CategoriaVaga categoriaVaga);
+    List<Vaga> findByRecrutador_IdRecrutadorOrderByCreatedAtDesc(Long idRecrutador);
 
+    List<Vaga> findByEmpresa_IdEmpresaOrderByCreatedAtDesc(Long idEmpresa);
 }

@@ -15,9 +15,9 @@ import com.hub.hds.models.usuario.Usuario;
 import com.hub.hds.repository.candidato.CandidatoRepository;
 import com.hub.hds.repository.usuario.UsuarioRepository;
 import org.springframework.http.HttpStatus;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
@@ -39,9 +39,11 @@ public class CandidatoService {
         this.passwordEncoder = passwordEncoder;
     }
 
-    // CREATE
     @Transactional
     public Long cadastrar(CandidatoCadastroRequest request) {
+        if (usuarioRepository.existsByEmail(request.email())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "E-mail já cadastrado");
+        }
 
         Usuario usuario = new Usuario();
         usuario.setEmail(request.email());
@@ -49,89 +51,7 @@ public class CandidatoService {
         usuario.setRole(Role.CANDIDATO);
         usuarioRepository.save(usuario);
 
-        Candidato candidato = Candidato.builder()
-                .nomeCompleto(request.nomeCompleto())
-                .cpf(request.cpf())
-                .telefone(request.telefone())
-                .genero(request.genero())
-                .dataNascimento(request.dataNascimento())
-                .cidade(request.cidade())
-                .estado(request.estado())
-                .usuario(usuario)
-                .build();
-
-        if (request.experiencias() != null) {
-            for (ExperienciaRequest expReq : request.experiencias()) {
-                Experiencia exp = Experiencia.builder()
-                        .empresa(expReq.empresa())
-                        .cargo(expReq.cargo())
-                        .descricao(expReq.descricao())
-                        .dataInicio(expReq.dataInicio())
-                        .dataFim(expReq.dataFim())
-                        .atual(expReq.atual())
-                        .candidato(candidato)
-                        .build();
-                candidato.getExperiencias().add(exp);
-            }
-        }
-
-        if (request.formacoes() != null) {
-            for (FormacaoRequest formReq : request.formacoes()) {
-                Formacao form = Formacao.builder()
-                        .instituicao(formReq.instituicao())
-                        .curso(formReq.curso())
-                        .nivelFormacao(formReq.nivelFormacao())
-                        .statusFormacao(formReq.statusFormacao())
-                        .dataInicio(formReq.dataInicio())
-                        .dataFim(formReq.dataFim())
-                        .candidato(candidato)
-                        .build();
-                candidato.getFormacoes().add(form);
-            }
-        }
-
-        candidatoRepository.save(candidato);
-        return candidato.getIdCandidato();
-    }
-
-    //LISTAR POR ID
-    public CandidatoPerfilDTO buscarPorId(Long id) {
-
-        Candidato candidato = candidatoRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND,
-                        "Candidato não encontrado"
-                ));
-        return new CandidatoPerfilDTO(
-                candidato.getIdCandidato(),
-                candidato.getNomeCompleto(),
-                candidato.getTelefone(),
-                candidato.getGenero(),
-                candidato.getDataNascimento() != null
-                        ? candidato.getDataNascimento().toString()
-                        : null,
-                candidato.getCidade(),
-                candidato.getEstado(),
-                candidato.getVideoApresentacao(),
-                candidato.getExperiencias()
-                        .stream()
-                        .map(ExperienciaDTO::fromEntity)
-                        .toList(),
-                candidato.getFormacoes()
-                        .stream()
-                        .map(FormacaoDTO::fromEntity)
-                        .toList(),
-                candidato.getVideoApresentacao()
-        );
-
-    }
-    //UPDATE
-    @Transactional
-    public void atualizar(Long id, CandidatoCadastroRequest request) {
-
-        Candidato candidato = candidatoRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Candidato não encontrado"));
-
+        Candidato candidato = new Candidato();
         candidato.setNomeCompleto(request.nomeCompleto());
         candidato.setCpf(request.cpf());
         candidato.setTelefone(request.telefone());
@@ -139,91 +59,151 @@ public class CandidatoService {
         candidato.setDataNascimento(request.dataNascimento());
         candidato.setCidade(request.cidade());
         candidato.setEstado(request.estado());
+        candidato.setUsuario(usuario);
 
-        candidato.getExperiencias().clear();
-        if (request.experiencias() != null) {
-            for (ExperienciaRequest expReq : request.experiencias()) {
-                Experiencia exp = Experiencia.builder()
-                        .empresa(expReq.empresa())
-                        .cargo(expReq.cargo())
-                        .descricao(expReq.descricao())
-                        .dataInicio(expReq.dataInicio())
-                        .dataFim(expReq.dataFim())
-                        .atual(expReq.atual())
-                        .candidato(candidato)
-                        .build();
-                candidato.getExperiencias().add(exp);
+        applyExperiencias(candidato, request.experiencias());
+        applyFormacoes(candidato, request.formacoes());
+
+        candidatoRepository.save(candidato);
+        return candidato.getIdCandidato();
+    }
+
+    @Transactional(readOnly = true)
+    public CandidatoPerfilDTO buscarPorEmail(String email) {
+        Candidato candidato = candidatoRepository.findByUsuario_Email(email)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Candidato não encontrado"));
+        return toPerfilDTO(candidato);
+    }
+
+    @Transactional(readOnly = true)
+    public CandidatoPerfilDTO buscarPorId(Long id) {
+        Candidato candidato = candidatoRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Candidato não encontrado"));
+        return toPerfilDTO(candidato);
+    }
+
+    @Transactional
+    public void atualizar(Long id, CandidatoCadastroRequest request, String emailUsuario) {
+        Candidato candidato = candidatoRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Candidato não encontrado"));
+
+        if (emailUsuario != null && !emailUsuario.isBlank()) {
+            String emailDono = candidato.getUsuario() != null ? candidato.getUsuario().getEmail() : null;
+            if (emailDono != null && !emailDono.equalsIgnoreCase(emailUsuario)) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Candidato não pertence ao usuário autenticado");
             }
         }
 
-        candidato.getFormacoes().clear();
+        candidato.setNomeCompleto(defaultIfNull(request.nomeCompleto(), candidato.getNomeCompleto()));
+        candidato.setCpf(defaultIfNull(request.cpf(), candidato.getCpf()));
+        candidato.setTelefone(defaultIfNull(request.telefone(), candidato.getTelefone()));
+        candidato.setGenero(request.genero() != null ? request.genero() : candidato.getGenero());
+        candidato.setDataNascimento(request.dataNascimento() != null ? request.dataNascimento() : candidato.getDataNascimento());
+        candidato.setCidade(defaultIfNull(request.cidade(), candidato.getCidade()));
+        candidato.setEstado(defaultIfNull(request.estado(), candidato.getEstado()));
+
+        if (request.experiencias() != null) {
+            applyExperiencias(candidato, request.experiencias());
+        }
         if (request.formacoes() != null) {
-            for (FormacaoRequest formReq : request.formacoes()) {
-                Formacao form = Formacao.builder()
-                        .instituicao(formReq.instituicao())
-                        .curso(formReq.curso())
-                        .nivelFormacao(formReq.nivelFormacao())
-                        .statusFormacao(formReq.statusFormacao())
-                        .dataInicio(formReq.dataInicio())
-                        .dataFim(formReq.dataFim())
-                        .candidato(candidato)
-                        .build();
-                candidato.getFormacoes().add(form);
+            applyFormacoes(candidato, request.formacoes());
+        }
+
+        if (request.email() != null && !request.email().isBlank()) {
+            Usuario usuario = candidato.getUsuario();
+            if (usuario != null && !request.email().equalsIgnoreCase(usuario.getEmail())) {
+                if (usuarioRepository.existsByEmail(request.email())) {
+                    throw new ResponseStatusException(HttpStatus.CONFLICT, "E-mail já cadastrado");
+                }
+                usuario.setEmail(request.email());
+            }
+        }
+
+        if (request.senha() != null && !request.senha().isBlank()) {
+            Usuario usuario = candidato.getUsuario();
+            if (usuario != null) {
+                usuario.setSenha(passwordEncoder.encode(request.senha()));
             }
         }
 
         candidatoRepository.save(candidato);
     }
 
-    //DELETE
     @Transactional
-    public void deletar(Long id) {
+    public void deletar(Long id, String emailUsuario) {
+        Candidato candidato = candidatoRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Candidato não encontrado"));
 
-        if (!candidatoRepository.existsById(id)) {
-            throw new RuntimeException("Candidato não encontrado");
+        if (emailUsuario != null && !emailUsuario.isBlank()) {
+            String emailDono = candidato.getUsuario() != null ? candidato.getUsuario().getEmail() : null;
+            if (emailDono != null && !emailDono.equalsIgnoreCase(emailUsuario)) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Candidato não pertence ao usuário autenticado");
+            }
         }
 
-        candidatoRepository.deleteById(id);
+        candidatoRepository.delete(candidato);
     }
 
-    // =========================
-    // READ - LISTAR
-    // =========================
     public List<CandidatoCadastroResponse> listar() {
-        return candidatoRepository.findAll()
-                .stream()
-                .map(CandidatoCadastroResponse::new)
-                .toList();
+        return candidatoRepository.findAll().stream().map(CandidatoCadastroResponse::new).toList();
     }
 
     @Transactional(readOnly = true)
     public CandidatoPerfilDTO buscarPerfilProfissional(Long idCandidato) {
+        return buscarPorId(idCandidato);
+    }
 
-        Candidato candidato = candidatoRepository.findById(idCandidato)
-                .orElseThrow(() ->
-                        new RuntimeException("Candidato não encontrado")
-                );
+    private void applyExperiencias(Candidato candidato, List<ExperienciaRequest> experiencias) {
+        candidato.getExperiencias().clear();
+        if (experiencias == null) return;
+        for (ExperienciaRequest expReq : experiencias) {
+            Experiencia exp = Experiencia.builder()
+                    .empresa(expReq.empresa())
+                    .cargo(expReq.cargo())
+                    .descricao(expReq.descricao())
+                    .dataInicio(expReq.dataInicio())
+                    .dataFim(expReq.dataFim())
+                    .atual(expReq.atual())
+                    .candidato(candidato)
+                    .build();
+            candidato.getExperiencias().add(exp);
+        }
+    }
 
+    private void applyFormacoes(Candidato candidato, List<FormacaoRequest> formacoes) {
+        candidato.getFormacoes().clear();
+        if (formacoes == null) return;
+        for (FormacaoRequest formReq : formacoes) {
+            Formacao form = Formacao.builder()
+                    .instituicao(formReq.instituicao())
+                    .curso(formReq.curso())
+                    .nivelFormacao(formReq.nivelFormacao())
+                    .statusFormacao(formReq.statusFormacao())
+                    .dataInicio(formReq.dataInicio())
+                    .dataFim(formReq.dataFim())
+                    .candidato(candidato)
+                    .build();
+            candidato.getFormacoes().add(form);
+        }
+    }
+
+    private CandidatoPerfilDTO toPerfilDTO(Candidato candidato) {
         return new CandidatoPerfilDTO(
                 candidato.getIdCandidato(),
                 candidato.getNomeCompleto(),
                 candidato.getTelefone(),
                 candidato.getGenero(),
-                candidato.getDataNascimento() != null
-                        ? candidato.getDataNascimento().toString()
-                        : null,
+                candidato.getDataNascimento() != null ? candidato.getDataNascimento().toString() : null,
                 candidato.getCidade(),
                 candidato.getEstado(),
-                candidato.getVideoApresentacao(),
-                candidato.getExperiencias()
-                        .stream()
-                        .map(ExperienciaDTO::fromEntity)
-                        .toList(),
-                candidato.getFormacoes()
-                        .stream()
-                        .map(FormacaoDTO::fromEntity)
-                        .toList(),
+                candidato.getUsuario() != null ? candidato.getUsuario().getEmail() : null,
+                candidato.getExperiencias().stream().map(ExperienciaDTO::fromEntity).toList(),
+                candidato.getFormacoes().stream().map(FormacaoDTO::fromEntity).toList(),
                 candidato.getVideoApresentacao()
         );
+    }
+
+    private String defaultIfNull(String novo, String atual) {
+        return novo != null ? novo : atual;
     }
 }

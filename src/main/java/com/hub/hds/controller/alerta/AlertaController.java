@@ -6,6 +6,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.net.URI;
+import java.util.Map;
+
 @RestController
 @RequestMapping("/alerta")
 public class AlertaController {
@@ -17,9 +20,16 @@ public class AlertaController {
     }
 
     @PostMapping
-    public ResponseEntity<Void> criarAlerta(@RequestBody AlertaDTO alertaDTO) {
+    public ResponseEntity<Map<String, String>> criarAlerta(@RequestBody AlertaDTO alertaDTO) {
         alertaService.criarAlerta(alertaDTO);
-        return ResponseEntity.status(HttpStatus.CREATED).build();
+        return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("message", "Alerta criado com sucesso"));
     }
 
+    @GetMapping("/cancelar")
+    public ResponseEntity<Void> cancelar(@RequestParam("token") String token) {
+        alertaService.cancelarAlerta(token);
+        return ResponseEntity.status(HttpStatus.FOUND)
+                .location(URI.create("/"))
+                .build();
+    }
 }

@@ -14,24 +14,12 @@ public class CorsConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-
-        // ✅ ORIGIN EXATO do XAMPP (o seu)
-        config.setAllowedOrigins(List.of(
-                "http://localhost",
-                "http://127.0.0.1"
-        ));
-
-        // ✅ métodos (inclui OPTIONS)
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-
-        // ✅ headers (inclui Authorization)
-        config.setAllowedHeaders(List.of("Authorization", "Content-Type"));
-
-        // (opcional) se você quiser ler algum header na resposta
-        config.setExposedHeaders(List.of("Authorization"));
-
-        // ✅ se usar cookies/sessão: true. Se NÃO usa cookies, pode deixar true mesmo.
-        config.setAllowCredentials(true);
+        config.setAllowedOriginPatterns(List.of("*"));
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        config.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept", "Origin", "X-Requested-With"));
+        config.setExposedHeaders(List.of("Authorization", "Content-Type"));
+        config.setAllowCredentials(false);
+        config.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);

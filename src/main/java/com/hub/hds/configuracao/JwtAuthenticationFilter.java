@@ -2,11 +2,11 @@ package com.hub.hds.configuracao;
 
 import com.hub.hds.dto.usuario.UsuarioDashboardAuthDTO;
 import com.hub.hds.service.jwt.JwtService;
+import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -17,18 +17,22 @@ import java.io.IOException;
 import java.util.List;
 
 @Component
-public class  JwtAuthenticationFilter extends OncePerRequestFilter {
+public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-    @Autowired
-    private JwtService jwtService;
+    private final JwtService jwtService;
+
+    public JwtAuthenticationFilter(JwtService jwtService) {
+        this.jwtService = jwtService;
+    }
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getServletPath();
-
         return path.startsWith("/auth/login")
-                || path.startsWith("/auth/login/empresa")
-                || path.startsWith("/pre-candidaturas");
+                || path.startsWith("/auth/reset-senha")
+                || path.startsWith("/empresa/cadastro")
+                || path.startsWith("/pre-candidaturas")
+                || ("GET".equalsIgnoreCase(request.getMethod()) && path.equals("/vagas/list"));
     }
 
     @Override
@@ -37,28 +41,24 @@ public class  JwtAuthenticationFilter extends OncePerRequestFilter {
             HttpServletResponse response,
             FilterChain filterChain
     ) throws ServletException, IOException {
-
         String authHeader = request.getHeader("Authorization");
 
-        if (authHeader != null && authHeader.startsWith("Bearer ")) {
-
+        if (authHeader != null && authHeader.startsWith("Bearer ") && SecurityContextHolder.getContext().getAuthentication() == null) {
             String token = authHeader.substring(7);
-
-            UsuarioDashboardAuthDTO usuario = jwtService.extrairUsuario(token);
-
-            // 🔥 CORREÇÃO PRINCIPAL: EMAIL COMO PRINCIPAL
-            UsernamePasswordAuthenticationToken authentication =
-                    new UsernamePasswordAuthenticationToken(
-                            usuario.email(), // <-- ISSO RESOLVE O ERRO
-                            null,
-                            List.of(new SimpleGrantedAuthority("ROLE_" + usuario.role()))
-                    );
-
-            SecurityContextHolder.getContext().setAuthentication(authentication);
+            try {
+                UsuarioDashboardAuthDTO usuario = jwtService.extrairUsuario(token);
+                UsernamePasswordAuthenticationToken authentication =
+                        new UsernamePasswordAuthenticationToken(
+                                usuario.email(),
+                                null,
+                                List.of(new SimpleGrantedAuthority("ROLE_" + usuario.role()))
+                        );
+                SecurityContextHolder.getContext().setAuthentication(authentication);
+            } catch (JwtException | IllegalArgumentException ignored) {
+                SecurityContextHolder.clearContext();
+            }
         }
 
         filterChain.doFilter(request, response);
     }
 }
-
-

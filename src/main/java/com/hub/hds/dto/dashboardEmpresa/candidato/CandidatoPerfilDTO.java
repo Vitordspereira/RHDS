@@ -14,7 +14,7 @@ public record CandidatoPerfilDTO(
         String dataNascimento,
         String cidade,
         String estado,
-        String resumoProfissional,
+        String email,
         List<ExperienciaDTO> experiencias,
         List<FormacaoDTO> formacoes,
         String videoApresentacao

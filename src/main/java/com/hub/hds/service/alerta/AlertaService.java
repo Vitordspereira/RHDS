@@ -91,6 +91,23 @@ public class AlertaService {
         emailService.enviarEmail(alerta.getEmail(), assunto, mensagem);
     }
 
+
+    public void cancelarAlerta(String token) {
+        if (token == null || token.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Token de cancelamento inválido");
+        }
+
+        Alerta alerta = alertaRepository.findByTokenCancelamento(token)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Alerta não encontrado"));
+
+        if (!Boolean.TRUE.equals(alerta.getAtivo())) {
+            return;
+        }
+
+        alerta.setAtivo(false);
+        alertaRepository.save(alerta);
+    }
+
     // =========================
     // AVISAR CANDIDATOS (ALERTAS)
     // =========================

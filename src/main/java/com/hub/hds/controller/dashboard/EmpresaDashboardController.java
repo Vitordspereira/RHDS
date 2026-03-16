@@ -8,7 +8,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/empresa")
+@RequestMapping({"/empresa", "/recrutador"})
 public class EmpresaDashboardController {
 
     private final EmpresaDashboardService empresaDashboardService;
@@ -22,28 +22,18 @@ public class EmpresaDashboardController {
         this.empresaService = empresaService;
     }
 
-    /**
-     * Retorna os dados da empresa do usuário logado
-     */
-    @GetMapping("/me")
+    @GetMapping({"/me", "/recrutador/me"})
     public EmpresaDashboardDTO minhaEmpresa(Authentication authentication) {
-
         if (authentication == null || !authentication.isAuthenticated()) {
             throw new RuntimeException("Usuário não autenticado");
         }
-
         String emailUsuarioLogado = authentication.getName();
-
         Long idEmpresa = empresaService.buscarIdEmpresaPorEmail(emailUsuarioLogado);
-
         return empresaDashboardService.buscarEmpresaLogada(idEmpresa);
     }
 
-    @PutMapping("/atualizar")
-    public void atualizarEmpresa(
-            @RequestBody EmpresaUpdateDTO empresaUpdateDTO,
-            Authentication authentication
-            ){
+    @PutMapping({"/atualizar", "/me"})
+    public void atualizarEmpresa(@RequestBody EmpresaUpdateDTO empresaUpdateDTO, Authentication authentication) {
         empresaDashboardService.atualizarEmpresaDoUsuario(empresaUpdateDTO, authentication.getName());
     }
 }
