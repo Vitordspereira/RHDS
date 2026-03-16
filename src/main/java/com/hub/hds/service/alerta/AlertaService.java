@@ -100,7 +100,7 @@ public class AlertaService {
         Alerta alerta = alertaRepository.findByTokenCancelamento(token)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Alerta não encontrado"));
 
-        if (!Boolean.TRUE.equals(alerta.getAtivo())) {
+        if (!alerta.isAtivo()) {
             return;
         }
 
