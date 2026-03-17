@@ -2,7 +2,6 @@ package com.hub.hds.models.empresa;
 
 import com.hub.hds.models.recrutador.Recrutador;
 import com.hub.hds.models.unidadeEmpresa.UnidadeEmpresa;
-import com.hub.hds.models.vaga.Vaga;
 import jakarta.persistence.*;
 import lombok.*;
 
