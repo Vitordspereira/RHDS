@@ -15,7 +15,6 @@ import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -44,9 +43,9 @@ public class PreCandidaturaService {
     // =========================
     // 1️⃣ INICIAR PRÉ-CANDIDATURA
     // =========================
+    @Transactional
     public PreCandidatura iniciar(Long vagaId, String email) {
 
-        // 🔐 Bloqueia apenas se houver pré-candidatura ativa
         if (preCandidaturaRepository.existsByEmailAndVaga_IdVagaAndStatusPreCandidatura(
                 email,
                 vagaId,
@@ -56,26 +55,26 @@ public class PreCandidaturaService {
         }
 
         Vaga vaga = vagaRepository.findById(vagaId)
-                .orElseThrow(() -> new RuntimeException("Vaga não encontrada"));
+                .orElseThrow(() -> new RuntimeException("Vaga não encontrada."));
 
-        // Criação da pré-candidatura
         PreCandidatura pre = PreCandidatura.builder()
                 .email(email)
                 .vaga(vaga)
-                .tokenConfirmacao(UUID.randomUUID().toString())  // Gera o token
+                .tokenConfirmacao(UUID.randomUUID().toString())
                 .statusPreCandidatura(StatusPreCandidatura.INICIADA)
+                .tokenEnviado(false)
                 .emailLembreteEnviado(false)
-                .expiresAt(LocalDateTime.now().plusHours(24))  // Define a expiração do token
+                .expiresAt(LocalDateTime.now().plusHours(24))
                 .build();
 
         pre = preCandidaturaRepository.save(pre);
 
-        // Enviar o token por e-mail
         if (!pre.isTokenEnviado()) {
             emailService.enviarTokenPorEmail(email, pre.getTokenConfirmacao());
             pre.setTokenEnviado(true);
             preCandidaturaRepository.save(pre);
         }
+
         return pre;
     }
 
@@ -86,41 +85,36 @@ public class PreCandidaturaService {
 
         PreCandidatura pre = preCandidaturaRepository
                 .findByTokenConfirmacao(token)
-                .orElseThrow(() -> new RuntimeException("Token inválido"));
+                .orElseThrow(() -> new RuntimeException("Token inválido."));
 
-        // Verifica se o token expirou
         if (pre.getStatusPreCandidatura() == StatusPreCandidatura.EXPIRADA ||
                 pre.getExpiresAt().isBefore(LocalDateTime.now())) {
 
             pre.setStatusPreCandidatura(StatusPreCandidatura.EXPIRADA);
             preCandidaturaRepository.save(pre);
 
-            throw new RuntimeException("Pré-candidatura expirada");
+            throw new RuntimeException("Pré-candidatura expirada.");
         }
 
         return pre;
     }
 
     // =========================
-    // 3️⃣ CONFIRMAR NA TELA E CONVERTER
+    // 3️⃣ CONFIRMAR E CONVERTER
     // =========================
     @Transactional
     public void confirmarEConverter(String token) {
 
-        // Valida o token
         PreCandidatura pre = validarToken(token);
 
-        // Se a pré-candidatura já foi convertida, não faz nada
         if (pre.getStatusPreCandidatura() == StatusPreCandidatura.CONVERTIDA) {
             return;
         }
 
-        // Busca o candidato associado ao e-mail
         Candidato candidato = candidatoRepository
                 .findByUsuario_Email(pre.getEmail())
-                .orElseThrow(() -> new RuntimeException("Nenhum candidato encontrado para este e-mail"));
+                .orElseThrow(() -> new RuntimeException("Nenhum candidato encontrado para este e-mail."));
 
-        // Verifica se o candidato já se inscreveu para esta vaga
         if (candidaturaRepository.existsByCandidato_IdCandidatoAndVaga_IdVaga(
                 candidato.getIdCandidato(),
                 pre.getVaga().getIdVaga()
@@ -128,7 +122,6 @@ public class PreCandidaturaService {
             throw new RuntimeException("Você já se candidatou a esta vaga.");
         }
 
-        // Cria a candidatura
         Candidatura candidatura = Candidatura.builder()
                 .candidato(candidato)
                 .vaga(pre.getVaga())
@@ -137,40 +130,10 @@ public class PreCandidaturaService {
 
         candidaturaRepository.save(candidatura);
 
-        // Marca a pré-candidatura como convertida
         pre.setStatusPreCandidatura(StatusPreCandidatura.CONVERTIDA);
         preCandidaturaRepository.save(pre);
 
-        // Envia o e-mail de candidatura confirmada
         emailService.enviarConfirmacaoCandidatura(pre.getEmail(), pre.getVaga());
     }
-
-    // =========================
-    // 4️⃣ BUSCAR PARA LEMBRETE
-    // =========================
-    public List<PreCandidatura> buscarParaLembrete() {
-        return preCandidaturaRepository
-                .findByStatusPreCandidaturaAndEmailLembreteEnviadoFalseAndCreatedAtBefore(
-                        StatusPreCandidatura.INICIADA,
-                        LocalDateTime.now().minusHours(24)
-                );
-    }
-
-    // =========================
-    // 5️⃣ ENVIAR LEMBRETES (JOB)
-    // =========================
-    public void enviarLembretes() {
-
-        List<PreCandidatura> pendentes = buscarParaLembrete();
-
-        pendentes.forEach(pre -> {
-            // Envia o lembrete de interesse por e-mail
-            emailService.enviarLembreteInteresse(pre.getEmail(), pre.getVaga());
-            pre.setEmailLembreteEnviado(true);
-        });
-
-        preCandidaturaRepository.saveAll(pendentes);
-    }
 }
-
 

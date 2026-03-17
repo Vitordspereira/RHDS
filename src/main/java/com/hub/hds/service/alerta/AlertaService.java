@@ -7,6 +7,7 @@ import com.hub.hds.models.alerta.Alerta;
 import com.hub.hds.models.vaga.Vaga;
 import com.hub.hds.repository.alerta.AlertaRepository;
 import com.hub.hds.service.EmailService;
+import jakarta.transaction.Transactional;
 import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -17,11 +18,17 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
+import org.springframework.beans.factory.annotation.Value;
+
+
 @Service
 public class AlertaService {
 
     private final AlertaRepository alertaRepository;
     private final EmailService emailService;
+
+    @Value("${app.base-url}")
+    private String appBaseUrl;
 
     public AlertaService(
             AlertaRepository alertaRepository,
@@ -31,9 +38,7 @@ public class AlertaService {
         this.emailService = emailService;
     }
 
-    // =========================
-    // CRIAR ALERTA
-    // =========================
+    @Transactional
     public void criarAlerta(AlertaDTO alertaDTO) {
 
         boolean jaExiste = alertaRepository.existsByEmailAndCargoAndCidade(
@@ -53,7 +58,6 @@ public class AlertaService {
         alerta.setEmail(alertaDTO.email());
         alerta.setCargo(alertaDTO.cargo());
         alerta.setCidade(alertaDTO.cidade());
-
         alerta.setAtivo(true);
         alerta.setTokenCancelamento(UUID.randomUUID().toString());
 
@@ -62,35 +66,44 @@ public class AlertaService {
         enviarEmailConfirmacao(alerta);
     }
 
-    // =========================
-    // E-MAIL: CONFIRMAÇÃO DE ALERTA
-    // =========================
     private void enviarEmailConfirmacao(Alerta alerta) {
-
         String assunto = "Alerta de vagas criado com sucesso";
+        String linkCancelamento = appBaseUrl + "/alerta/cancelar?token=" + alerta.getTokenCancelamento();
 
         String mensagem = """
-            <p>Olá!</p>
+            <html>
+                <body>
+                    <p>Olá!</p>
 
-            <p>Seu alerta de vagas foi criado com sucesso.</p>
+                    <p>Seu alerta de vagas foi criado com sucesso.</p>
 
-            <p>
-                <strong>Cargo:</strong> %s<br>
-                <strong>Cidade:</strong> %s
-            </p>
+                    <p>
+                        <strong>Cargo:</strong> %s<br>
+                        <strong>Cidade:</strong> %s
+                    </p>
 
-            <p>
-                Assim que surgirem novas vagas compatíveis,
-                você será avisado por e-mail.
-            </p>
+                    <p>
+                        Assim que surgirem novas vagas compatíveis,
+                        você será avisado por e-mail.
+                    </p>
+
+                    <p>
+                        Caso queira cancelar este alerta, clique no link abaixo:
+                    </p>
+
+                    <p>
+                        <a href="%s">Cancelar alerta</a>
+                    </p>
+                </body>
+            </html>
             """.formatted(
                 alerta.getCargo(),
-                alerta.getCidade()
+                alerta.getCidade(),
+                linkCancelamento
         );
 
         emailService.enviarEmail(alerta.getEmail(), assunto, mensagem);
     }
-
 
     public void cancelarAlerta(String token) {
         if (token == null || token.isBlank()) {
@@ -108,27 +121,20 @@ public class AlertaService {
         alertaRepository.save(alerta);
     }
 
-    // =========================
-    // AVISAR CANDIDATOS (ALERTAS)
-    // =========================
     @Async
     public void avisarCandidatos(Vaga vaga, Set<String> vagaKeys) {
 
-        if (vaga.getLocalizacao() == null ||
-                vaga.getLocalizacao().getCidade() == null) {
+        if (vaga.getLocalizacao() == null || vaga.getLocalizacao().getCidade() == null) {
             return;
         }
 
-        List<Alerta> alertas =
-                alertaRepository.findByCargoAndCidadeAndAtivoTrue(
-                        vaga.getCargo(),
-                        vaga.getLocalizacao().getCidade()
-                );
+        List<Alerta> alertas = alertaRepository.findByCargoAndCidadeAndAtivoTrue(
+                vaga.getCargo(),
+                vaga.getLocalizacao().getCidade()
+        );
 
         for (Alerta alerta : alertas) {
-
-            Set<String> alertKeys =
-                    KeywordExtractor.extract(alerta.getCargo());
+            Set<String> alertKeys = KeywordExtractor.extract(alerta.getCargo());
 
             Set<String> intersecao = new HashSet<>(alertKeys);
             intersecao.retainAll(vagaKeys);
@@ -139,33 +145,33 @@ public class AlertaService {
 
             int score = MatchScorer.score(alertKeys, vagaKeys);
 
-            double similaridade =
-                    (double) score / Math.min(alertKeys.size(), vagaKeys.size());
+            double similaridade = (double) score / Math.min(alertKeys.size(), vagaKeys.size());
 
             if (similaridade < 0.4) {
                 continue;
             }
 
-            // =========================
-            // E-MAIL INFORMATIVO (SEM BOTÃO E SEM DESCADASTRO)
-            // =========================
             String assunto = "Nova vaga compatível com seu alerta de emprego";
 
             String mensagem = """
-                <p>Olá!</p>
+                <html>
+                    <body>
+                        <p>Olá!</p>
 
-                <p>Encontramos uma nova vaga compatível com o alerta que você cadastrou:</p>
+                        <p>Encontramos uma nova vaga compatível com o alerta que você cadastrou:</p>
 
-                <p>
-                    <strong>Cargo:</strong> %s<br>
-                    <strong>Cidade:</strong> %s<br>
-                    <strong>Modalidade:</strong> %s<br>
-                    <strong>Tipo de contrato:</strong> %s
-                </p>
+                        <p>
+                            <strong>Cargo:</strong> %s<br>
+                            <strong>Cidade:</strong> %s<br>
+                            <strong>Modalidade:</strong> %s<br>
+                            <strong>Tipo de contrato:</strong> %s
+                        </p>
 
-                <p>
-                    Acesse a plataforma para visualizar mais detalhes.
-                </p>
+                        <p>
+                            Acesse a plataforma para visualizar mais detalhes.
+                        </p>
+                    </body>
+                </html>
                 """.formatted(
                     vaga.getCargo(),
                     vaga.getLocalizacao().getCidade(),
@@ -173,11 +179,7 @@ public class AlertaService {
                     vaga.getTipoContrato()
             );
 
-            emailService.enviarEmail(
-                    alerta.getEmail(),
-                    assunto,
-                    mensagem
-            );
+            emailService.enviarEmail(alerta.getEmail(), assunto, mensagem);
         }
     }
 }

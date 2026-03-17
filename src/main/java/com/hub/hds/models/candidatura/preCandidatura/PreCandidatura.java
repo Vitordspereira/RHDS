@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
         indexes =  {
                 @Index(name = "idx_pre_candidatura_email", columnList = "email"),
                 @Index(name = "idx_pre_candidatura_status", columnList = "status"),
-                @Index(name = "idx_pre_candidatua_expires", columnList = "expires_at")
+                @Index(name = "idx_pre_candidatura_expires", columnList = "expires_at")
         },
         uniqueConstraints = {
                 @UniqueConstraint(name = "uk_pre_candidatura_token", columnNames = "token_confirmacao")
@@ -47,9 +47,9 @@ public class PreCandidatura {
     private StatusPreCandidatura statusPreCandidatura;
 
     @Column(name = "email_lembrete_enviado", nullable = false)
-    private Boolean emailLembreteEnviado = false;
+    private boolean emailLembreteEnviado = false;
 
-    @Column(nullable = false)
+    @Column(name = "token_enviado", nullable = false)
     private boolean tokenEnviado = false;
 
     @Column(name = "created_at", updatable = false)
@@ -68,10 +68,6 @@ public class PreCandidatura {
 
         if (this.statusPreCandidatura == null) {
             this.statusPreCandidatura = StatusPreCandidatura.INICIADA;
-        }
-
-        if (this.emailLembreteEnviado == null) {
-            this.emailLembreteEnviado =false;
         }
     }
 }

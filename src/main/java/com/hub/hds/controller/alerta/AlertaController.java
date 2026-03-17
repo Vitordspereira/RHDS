@@ -5,6 +5,7 @@ import com.hub.hds.service.alerta.AlertaService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.net.URI;
 import java.util.Map;
@@ -21,8 +22,14 @@ public class AlertaController {
 
     @PostMapping
     public ResponseEntity<Map<String, String>> criarAlerta(@RequestBody AlertaDTO alertaDTO) {
-        alertaService.criarAlerta(alertaDTO);
-        return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("message", "Alerta criado com sucesso"));
+        try {
+            alertaService.criarAlerta(alertaDTO);
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(Map.of("message", "Alerta criado com sucesso"));
+        } catch (ResponseStatusException e) {
+            return ResponseEntity.status(e.getStatusCode())
+                    .body(Map.of("error", e.getReason() == null ? "Erro ao criar alerta" : e.getReason()));
+        }
     }
 
     @GetMapping("/cancelar")

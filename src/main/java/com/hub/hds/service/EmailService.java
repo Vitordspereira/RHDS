@@ -2,6 +2,7 @@ package com.hub.hds.service;
 
 import com.hub.hds.models.vaga.Vaga;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
@@ -17,66 +18,63 @@ public class EmailService {
     @Autowired
     private JavaMailSender mailSender;
 
-    // =========================
-    // METODO BASE PARA E-MAIL
-    // =========================
-    public void enviarEmail(String para, String assunto, String texto) {
+    @Value("${spring.mail.from}")
+    private String mailFrom;
+
+    public void enviarEmail(String para, String assunto, String html) {
         try {
             MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true);  // 'true' permite anexos e HTML
+            MimeMessageHelper helper = new MimeMessageHelper(message, false, "UTF-8");
 
             helper.setTo(para);
             helper.setSubject(assunto);
-            helper.setText(texto, true); // 'true' indica que o conteúdo é em HTML
-            helper.setFrom("vitorpj1602@gmail.com");
+            helper.setText(html, true);
+            helper.setFrom(mailFrom);
 
             mailSender.send(message);
-            System.out.println("EMAIL ENVIADO COM SUCESSO");
+            System.out.println("EMAIL ENVIADO COM SUCESSO PARA: " + para);
 
         } catch (Exception e) {
             System.err.println("ERRO AO ENVIAR EMAIL PARA: " + para);
             e.printStackTrace();
+            throw new RuntimeException("Falha ao enviar e-mail.", e);
         }
     }
 
-    // =========================
-    // EMAIL: ENVIAR TOKEN PARA CONFIRMAÇÃO DE CANDIDATURA
-    // =========================
     public void enviarTokenPorEmail(String email, String token) {
         String assunto = "Token de confirmação para sua candidatura";
-        String texto =
-                "Olá!\n\n" +
-                        "Para confirmar sua candidatura, use o seguinte token: " + token + "\n\n";
-        enviarEmail(email, assunto, texto);  // Envia o e-mail com o token
+
+        String html = """
+                <html>
+                    <body>
+                        <p>Olá!</p>
+                        <p>Para confirmar sua candidatura, use o seguinte token:</p>
+                        <p style="font-size:18px; font-weight:bold;">%s</p>
+                        <p>Esse token expira em 24 horas.</p>
+                    </body>
+                </html>
+                """.formatted(token);
+
+        enviarEmail(email, assunto, html);
     }
 
-    // =========================
-    // EMAIL: CONFIRMAÇÃO DE CANDIDATURA REALIZADA COM SUCESSO
-    // =========================
     public void enviarConfirmacaoCandidatura(String email, Vaga vaga) {
         String assunto = "Candidatura realizada com sucesso!";
-        String texto =
-                "Sua candidatura para a vaga \"" + vaga.getTituloFinal() + "\" foi realizada com sucesso.\n\n" +
-                        "Acompanhe as próximas etapas pelo seu perfil.";
-        enviarEmail(email, assunto, texto);  // Envia o e-mail de confirmação de candidatura
-    }
 
-    // =========================
-    // 3️⃣ LEMBRETE DE INTERESSE (ESTAVA FALTANDO)
-    // =========================
-    public void enviarLembreteInteresse(String email, Vaga vaga) {
-        String assunto = "Você ainda tem interesse nesta vaga?";
-        String texto =
-                "<p>Olá!</p>" +
-                        "<p>Notamos que você iniciou uma candidatura para a vaga:</p>" +
-                        "<p><strong>" + vaga.getTituloFinal() + "</strong></p>" +
-                        "<p>Caso ainda tenha interesse, acesse seu perfil e finalize a candidatura.</p>";
+        String html = """
+                <html>
+                    <body>
+                        <p>Olá!</p>
+                        <p>Sua candidatura para a vaga <strong>%s</strong> foi realizada com sucesso.</p>
+                        <p>Acompanhe as próximas etapas pelo seu perfil.</p>
+                    </body>
+                </html>
+                """.formatted(vaga.getTituloFinal());
 
-        enviarEmail(email, assunto, texto);
+        enviarEmail(email, assunto, html);
     }
 
     public void notificarVagaEncerrada(Vaga vaga, Set<String> emails) {
-
         String assunto = "Atualização: vaga encerrada";
 
         String corpo = """
@@ -95,6 +93,7 @@ public class EmailService {
             msg.setTo(email);
             msg.setSubject(assunto);
             msg.setText(corpo);
+            msg.setFrom(mailFrom);
 
             mailSender.send(msg);
         }
