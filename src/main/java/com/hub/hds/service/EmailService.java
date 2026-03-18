@@ -1,48 +1,82 @@
 package com.hub.hds.service;
 
 import com.hub.hds.models.vaga.Vaga;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 
-import jakarta.mail.internet.MimeMessage;
+import java.io.IOException;
+import java.net.URI;
+import java.net.http.HttpClient;
 
-import java.util.Set;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 
 @Service
 public class EmailService {
 
-    @Autowired
-    private JavaMailSender mailSender;
+    @Value("${resend.api.key}")
+    private String resendApiKey;
 
-    @Value("${spring.mail.from}")
-    private String mailFrom;
+    @Value("${resend.from}")
+    private String resendFrom;
+
+    private final HttpClient httpClient = HttpClient.newBuilder().build();
 
     public void enviarEmail(String para, String assunto, String html) {
-        try {
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, false, "UTF-8");
+        try{
+            String json = """
+                    {
+                    "from": "%s",
+                    "to": ["%s"],
+                    "subject": "%s",
+                    "html": %s
+                    }
+                    """.formatted(
+                            escapeJson(resendFrom),
+                    escapeJson(para),
+                    escapeJson(assunto),
+                    toJsonString(html)
+            );
 
-            helper.setTo(para);
-            helper.setSubject(assunto);
-            helper.setText(html, true);
-            helper.setFrom(mailFrom);
+            HttpRequest httpRequest = HttpRequest.newBuilder()
+                    .uri(URI.create("https://api.resend.com/emails"))
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer" + resendApiKey)
+                    .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                    .POST(HttpRequest.BodyPublishers.ofString(json, StandardCharsets.UTF_8))
+                    .build();
 
-            mailSender.send(message);
+            HttpResponse<String> httpResponse = httpClient.send(
+                    httpRequest,
+                    HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8)
+            );
+
+            int status = httpResponse.statusCode();
+
+            if (status < 200 || status >= 300) {
+                System.err.println("ERRO AO ENVIAR EMAIL PARA: " + para);
+                System.err.println("STATUS RESEND: " + status);
+                System.err.println("RESPOSTA RESEND: " + httpResponse.body());
+                throw new RuntimeException("Falha ao enviar e-mail.");
+            }
+
             System.out.println("EMAIL ENVIADO COM SUCESSO PARA: " + para);
-
-        } catch (Exception e) {
+        } catch (InterruptedException interruptedException){
+            Thread.currentThread().interrupt();
             System.err.println("ERRO AO ENVIAR EMAIL PARA: " + para);
-            e.printStackTrace();
-            throw new RuntimeException("Falha ao enviar e-mail.", e);
+            interruptedException.printStackTrace();
+            throw new RuntimeException("Falha ao enviar e-mail. ", interruptedException);
+        } catch (IOException ioException) {
+            System.err.println("ERRO AO ENVIAR EMAIL PARA: " + para);
+            ioException.printStackTrace();
+            throw new RuntimeException("Falha ao enviar e-mail. ", ioException);
         }
     }
 
     public void enviarTokenPorEmail(String email, String token) {
-        String assunto = "Token de confirmação para sua candidatura";
+        String assunto = "Token de confirmação para a sua candidatura";
 
         String html = """
                 <html>
@@ -50,7 +84,6 @@ public class EmailService {
                         <p>Olá!</p>
                         <p>Para confirmar sua candidatura, use o seguinte token:</p>
                         <p style="font-size:18px; font-weight:bold;">%s</p>
-                        <p>Esse token expira em 24 horas.</p>
                     </body>
                 </html>
                 """.formatted(token);
@@ -74,28 +107,39 @@ public class EmailService {
         enviarEmail(email, assunto, html);
     }
 
-    public void notificarVagaEncerrada(Vaga vaga, Set<String> emails) {
+
+    public void notificarVagaEncerrada(Vaga vaga, java.util.Set<String> emails) {
         String assunto = "Atualização: vaga encerrada";
 
-        String corpo = """
-                Olá!
-
-                A vaga "%s" foi encerrada pela empresa.
-
-                Agradecemos sua candidatura e desejamos sucesso nos próximos processos seletivos.
-
-                Atenciosamente,
-                RHDS
+        String html = """
+                <html>
+                    <body>
+                        <p>Olá!</p>
+                        <p>A vaga <strong>%s</strong> foi encerrada pela empresa.</p>
+                        <p>Agradecemos sua candidatura e desejamos sucesso nos próximos processos seletivos.</p>
+                        <p>Atenciosamente,<br>RHDS</p>
+                    </body>
+                </html>
                 """.formatted(vaga.getCargo());
 
         for (String email : emails) {
-            SimpleMailMessage msg = new SimpleMailMessage();
-            msg.setTo(email);
-            msg.setSubject(assunto);
-            msg.setText(corpo);
-            msg.setFrom(mailFrom);
+            enviarEmail(email, assunto, html);
+    }
+    }
 
-            mailSender.send(msg);
-        }
+    private String escapeJson(String value) {
+        if (value == null) return "";
+        return value
+                .replace("\\", "\\\\")
+                .replace("\"", "\\\"");
+    }
+
+    private String toJsonString(String value) {
+        if (value == null) return "\"\"";
+        return "\"" + value
+                .replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\r", "\\r")
+                .replace("\n", "\\n") + "\"";
     }
 }
