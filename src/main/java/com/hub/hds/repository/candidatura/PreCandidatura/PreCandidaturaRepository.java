@@ -8,12 +8,15 @@ import java.util.Optional;
 
 public interface PreCandidaturaRepository extends JpaRepository<PreCandidatura, Long> {
 
-    // 🔎 Busca por token (confirmação na tela)
     Optional<PreCandidatura> findByTokenConfirmacao(String tokenConfirmacao);
 
-
-    // 🔐 Evita duplicidade considerando status específico (NOVO)
     boolean existsByEmailAndVaga_IdVagaAndStatusPreCandidatura(
+            String email,
+            Long idVaga,
+            StatusPreCandidatura statusPreCandidatura
+    );
+
+    Optional<PreCandidatura> findByEmailAndVaga_IdVagaAndStatusPreCandidatura(
             String email,
             Long idVaga,
             StatusPreCandidatura statusPreCandidatura

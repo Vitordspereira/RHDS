@@ -15,8 +15,11 @@ import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.Optional;
 import java.util.UUID;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Service
 public class PreCandidaturaService {
 
@@ -40,22 +43,41 @@ public class PreCandidaturaService {
         this.emailService = emailService;
     }
 
-    // =========================
-    // 1️⃣ INICIAR PRÉ-CANDIDATURA
-    // =========================
     @Transactional
     public PreCandidatura iniciar(Long vagaId, String email) {
-
-        if (preCandidaturaRepository.existsByEmailAndVaga_IdVagaAndStatusPreCandidatura(
-                email,
-                vagaId,
-                StatusPreCandidatura.INICIADA
-        )) {
-            throw new RuntimeException("Já existe uma candidatura em andamento para esta vaga.");
+        if (email == null || email.isBlank()) {
+            throw new RuntimeException("E-mail não informado.");
         }
 
         Vaga vaga = vagaRepository.findById(vagaId)
                 .orElseThrow(() -> new RuntimeException("Vaga não encontrada."));
+
+        Optional<PreCandidatura> preExistenteOpt =
+                preCandidaturaRepository.findByEmailAndVaga_IdVagaAndStatusPreCandidatura(
+                        email,
+                        vagaId,
+                        StatusPreCandidatura.INICIADA
+                );
+
+        if (preExistenteOpt.isPresent()) {
+            PreCandidatura existente = preExistenteOpt.get();
+
+            if (existente.getExpiresAt() != null && existente.getExpiresAt().isBefore(LocalDateTime.now())) {
+                existente.setStatusPreCandidatura(StatusPreCandidatura.EXPIRADA);
+                preCandidaturaRepository.save(existente);
+                log.info("Pré-candidatura antiga expirada. email={}, vagaId={}", email, vagaId);
+            } else {
+                emailService.enviarTokenPorEmail(email, existente.getTokenConfirmacao());
+
+                if (!existente.isTokenEnviado()) {
+                    existente.setTokenEnviado(true);
+                    preCandidaturaRepository.save(existente);
+                }
+
+                log.info("Token reenviado para pré-candidatura já existente. email={}, vagaId={}", email, vagaId);
+                return existente;
+            }
+        }
 
         PreCandidatura pre = PreCandidatura.builder()
                 .email(email)
@@ -69,26 +91,22 @@ public class PreCandidaturaService {
 
         pre = preCandidaturaRepository.save(pre);
 
-        if (!pre.isTokenEnviado()) {
-            emailService.enviarTokenPorEmail(email, pre.getTokenConfirmacao());
-            pre.setTokenEnviado(true);
-            preCandidaturaRepository.save(pre);
-        }
+        emailService.enviarTokenPorEmail(email, pre.getTokenConfirmacao());
+        pre.setTokenEnviado(true);
 
+        pre = preCandidaturaRepository.save(pre);
+
+        log.info("Nova pré-candidatura criada com sucesso. email={}, vagaId={}", email, vagaId);
         return pre;
     }
 
-    // =========================
-    // 2️⃣ VALIDAR TOKEN (FRONT)
-    // =========================
     public PreCandidatura validarToken(String token) {
-
         PreCandidatura pre = preCandidaturaRepository
                 .findByTokenConfirmacao(token)
                 .orElseThrow(() -> new RuntimeException("Token inválido."));
 
         if (pre.getStatusPreCandidatura() == StatusPreCandidatura.EXPIRADA ||
-                pre.getExpiresAt().isBefore(LocalDateTime.now())) {
+                (pre.getExpiresAt() != null && pre.getExpiresAt().isBefore(LocalDateTime.now()))) {
 
             pre.setStatusPreCandidatura(StatusPreCandidatura.EXPIRADA);
             preCandidaturaRepository.save(pre);
@@ -99,15 +117,12 @@ public class PreCandidaturaService {
         return pre;
     }
 
-    // =========================
-    // 3️⃣ CONFIRMAR E CONVERTER
-    // =========================
     @Transactional
     public void confirmarEConverter(String token) {
-
         PreCandidatura pre = validarToken(token);
 
         if (pre.getStatusPreCandidatura() == StatusPreCandidatura.CONVERTIDA) {
+            log.info("Pré-candidatura já convertida. token={}", token);
             return;
         }
 
@@ -134,6 +149,8 @@ public class PreCandidaturaService {
         preCandidaturaRepository.save(pre);
 
         emailService.enviarConfirmacaoCandidatura(pre.getEmail(), pre.getVaga());
+
+        log.info("Pré-candidatura convertida em candidatura com sucesso. email={}, vagaId={}",
+                pre.getEmail(), pre.getVaga().getIdVaga());
     }
 }
-
