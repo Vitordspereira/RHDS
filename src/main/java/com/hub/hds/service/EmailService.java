@@ -1,84 +1,49 @@
 package com.hub.hds.service;
 
 import com.hub.hds.models.vaga.Vaga;
+import jakarta.mail.MessagingException;
+import jakarta.mail.internet.MimeMessage;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
+import org.springframework.mail.MailException;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
-
-import java.io.IOException;
-import java.net.URI;
-import java.net.http.HttpClient;
-
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.nio.charset.StandardCharsets;
 
 @Service
 public class EmailService {
 
-    @Value("${resend.api.key}")
-    private String resendApiKey;
+    private final JavaMailSender javaMailSender;
 
-    @Value("${resend.from}")
-    private String resendFrom;
+    @Value("${spring.mail.from}")
+    private String from;
 
-    private final HttpClient httpClient = HttpClient.newBuilder().build();
+    public EmailService(JavaMailSender javaMailSender) {
+        this.javaMailSender = javaMailSender;
+    }
 
     public void enviarEmail(String para, String assunto, String html) {
-        try{
-            String json = """
-                    {
-                    "from": "%s",
-                    "to": ["%s"],
-                    "subject": "%s",
-                    "html": %s
-                    }
-                    """.formatted(
-                            escapeJson(resendFrom),
-                    escapeJson(para),
-                    escapeJson(assunto),
-                    toJsonString(html)
-            );
+        try {
+            MimeMessage mimeMessage = javaMailSender.createMimeMessage();
+            MimeMessageHelper mimeMessageHelper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
 
-            HttpRequest httpRequest = HttpRequest.newBuilder()
-                    .uri(URI.create("https://api.resend.com/emails"))
-                    .header(HttpHeaders.AUTHORIZATION, "Bearer" + resendApiKey)
-                    .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                    .POST(HttpRequest.BodyPublishers.ofString(json, StandardCharsets.UTF_8))
-                    .build();
+            mimeMessageHelper.setFrom(from);
+            mimeMessageHelper.setTo(para);
+            mimeMessageHelper.setSubject(assunto);
+            mimeMessageHelper.setText(html, true);
 
-            HttpResponse<String> httpResponse = httpClient.send(
-                    httpRequest,
-                    HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8)
-            );
-
-            int status = httpResponse.statusCode();
-
-            if (status < 200 || status >= 300) {
-                System.err.println("ERRO AO ENVIAR EMAIL PARA: " + para);
-                System.err.println("STATUS RESEND: " + status);
-                System.err.println("RESPOSTA RESEND: " + httpResponse.body());
-                throw new RuntimeException("Falha ao enviar e-mail.");
-            }
-
+            javaMailSender.send(mimeMessage);
             System.out.println("EMAIL ENVIADO COM SUCESSO PARA: " + para);
-        } catch (InterruptedException interruptedException){
-            Thread.currentThread().interrupt();
-            System.err.println("ERRO AO ENVIAR EMAIL PARA: " + para);
-            interruptedException.printStackTrace();
-            throw new RuntimeException("Falha ao enviar e-mail. ", interruptedException);
-        } catch (IOException ioException) {
-            System.err.println("ERRO AO ENVIAR EMAIL PARA: " + para);
-            ioException.printStackTrace();
-            throw new RuntimeException("Falha ao enviar e-mail. ", ioException);
+        } catch (MessagingException | MailException mailException) {
+            System.err.println("ERRO AO ENVIAR UM EMAIL PARA: " + para);
+            mailException.printStackTrace();
+            throw new RuntimeException("Falha ao enviar e-mail.", mailException);
         }
     }
 
     public void enviarTokenPorEmail(String email, String token) {
         String assunto = "Token de confirmação para a sua candidatura";
 
-        String html = """
+        String hmtl = """
                 <html>
                     <body>
                         <p>Olá!</p>
@@ -88,7 +53,7 @@ public class EmailService {
                 </html>
                 """.formatted(token);
 
-        enviarEmail(email, assunto, html);
+        enviarEmail(email, assunto, hmtl);
     }
 
     public void enviarConfirmacaoCandidatura(String email, Vaga vaga) {
@@ -107,9 +72,8 @@ public class EmailService {
         enviarEmail(email, assunto, html);
     }
 
-
     public void notificarVagaEncerrada(Vaga vaga, java.util.Set<String> emails) {
-        String assunto = "Atualização: vaga encerrada";
+        String assunto = "Atualização vaga encerrada";
 
         String html = """
                 <html>
@@ -124,22 +88,6 @@ public class EmailService {
 
         for (String email : emails) {
             enviarEmail(email, assunto, html);
-    }
-    }
-
-    private String escapeJson(String value) {
-        if (value == null) return "";
-        return value
-                .replace("\\", "\\\\")
-                .replace("\"", "\\\"");
-    }
-
-    private String toJsonString(String value) {
-        if (value == null) return "\"\"";
-        return "\"" + value
-                .replace("\\", "\\\\")
-                .replace("\"", "\\\"")
-                .replace("\r", "\\r")
-                .replace("\n", "\\n") + "\"";
+        }
     }
 }
