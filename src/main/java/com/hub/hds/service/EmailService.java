@@ -1,52 +1,85 @@
 package com.hub.hds.service;
 
 import com.hub.hds.models.vaga.Vaga;
-import jakarta.mail.MessagingException;
-import jakarta.mail.internet.MimeMessage;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.MailException;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 import lombok.extern.slf4j.Slf4j;
 import java.util.Set;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+
+import java.io.IOException;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 
 @Slf4j
 @Service
 public class EmailService {
 
-    private final JavaMailSender javaMailSender;
+    @Value("${resend.api.key}")
+    private String resendApiKey;
 
-    @Value("${spring.mail.from:${spring.mail.username}}")
-    private String from;
+    @Value("${resend.from}")
+    private String resendFrom;
 
-    public EmailService(JavaMailSender javaMailSender) {
-        this.javaMailSender = javaMailSender;
-    }
+    private final HttpClient httpClient = HttpClient.newHttpClient();
 
     public void enviarEmail(String para, String assunto, String html) {
         if (para == null || para.isBlank()) {
             throw new IllegalArgumentException("E-mail de destino não informado.");
         }
 
-        if (from == null || from.isBlank()) {
+        if (resendFrom == null || resendFrom.isBlank()) {
             throw new IllegalStateException("Remetente de e-mail não configurado.");
         }
 
+        if (resendApiKey == null || resendApiKey.isBlank()) {
+            throw new IllegalStateException("Chave da Resend não configurada.");
+        }
+
         try {
-            MimeMessage mimeMessage = javaMailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
+            String json = """
+                    {
+                      "from": "%s",
+                      "to": ["%s"],
+                      "subject": "%s",
+                      "html": %s
+                    }
+                    """.formatted(
+                    escapeJson(resendFrom),
+                    escapeJson(para),
+                    escapeJson(assunto),
+                    toJsonString(html)
+            );
 
-            helper.setFrom(from);
-            helper.setTo(para);
-            helper.setSubject(assunto);
-            helper.setText(html, true);
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create("https://api.resend.com/emails"))
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + resendApiKey)
+                    .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                    .POST(HttpRequest.BodyPublishers.ofString(json, StandardCharsets.UTF_8))
+                    .build();
 
-            javaMailSender.send(mimeMessage);
+            HttpResponse<String> response =
+                    httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+            log.info("Resend status: {}", response.statusCode());
+            log.info("Resend body: {}", response.body());
+
+            if (response.statusCode() < 200 || response.statusCode() >= 300) {
+                throw new RuntimeException("Falha ao enviar e-mail via Resend: " + response.body());
+            }
+
             log.info("E-mail enviado com sucesso para {}", para);
 
-        } catch (MessagingException | MailException e) {
-            log.error("Erro ao enviar e-mail para {} com assunto {}", para, assunto, e);
+        } catch (IOException e) {
+            log.error("Erro de IO ao enviar e-mail para {}", para, e);
+            throw new RuntimeException("Falha ao enviar e-mail.", e);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.error("Thread interrompida ao enviar e-mail para {}", para, e);
             throw new RuntimeException("Falha ao enviar e-mail.", e);
         }
     }
@@ -62,7 +95,7 @@ public class EmailService {
                         <p style="font-size:18px; font-weight:bold;">%s</p>
                     </body>
                 </html>
-                """.formatted(token);
+                """.formatted(escapeHtml(token));
 
         enviarEmail(email, assunto, html);
     }
@@ -82,7 +115,7 @@ public class EmailService {
                         <p>Acompanhe as próximas etapas pelo seu perfil.</p>
                     </body>
                 </html>
-                """.formatted(tituloVaga);
+                """.formatted(escapeHtml(tituloVaga));
 
         enviarEmail(email, assunto, html);
     }
@@ -103,7 +136,7 @@ public class EmailService {
                         <p>Atenciosamente,<br>RHDS</p>
                     </body>
                 </html>
-                """.formatted(cargo);
+                """.formatted(escapeHtml(cargo));
 
         for (String email : emails) {
             try {
@@ -112,5 +145,28 @@ public class EmailService {
                 log.error("Falha ao notificar encerramento para {}", email, e);
             }
         }
+    }
+
+    private String toJsonString(String value) {
+        return "\"" + escapeJson(value) + "\"";
+    }
+
+    private String escapeJson(String value) {
+        if (value == null) return "";
+        return value
+                .replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\n", "\\n")
+                .replace("\r", "\\r");
+    }
+
+    private String escapeHtml(String value) {
+        if (value == null) return "";
+        return value
+                .replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\"", "&quot;")
+                .replace("'", "&#39;");
     }
 }
