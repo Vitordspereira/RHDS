@@ -4,8 +4,6 @@ import com.hub.hds.models.candidatura.preCandidatura.PreCandidatura;
 import com.hub.hds.models.candidatura.preCandidatura.StatusPreCandidatura;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Optional;
 
 public interface PreCandidaturaRepository extends JpaRepository<PreCandidatura, Long> {
@@ -20,11 +18,4 @@ public interface PreCandidaturaRepository extends JpaRepository<PreCandidatura, 
             Long idVaga,
             StatusPreCandidatura statusPreCandidatura
     );
-
-    // 📧 Buscar para e-mail de lembrete (não confirmou)
-    List<PreCandidatura> findByStatusPreCandidaturaAndEmailLembreteEnviadoFalseAndCreatedAtBefore(
-            StatusPreCandidatura statusPreCandidatura,
-            LocalDateTime limite
-    );
-
 }

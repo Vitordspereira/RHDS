@@ -1,27 +1,23 @@
 package com.hub.hds.controller.candidatura.preCandidatura;
 
-import com.hub.hds.models.candidatura.preCandidatura.PreCandidatura;
 import com.hub.hds.service.candidatura.preCandidatura.PreCandidaturaService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.Map;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @RestController
 @RequestMapping("/pre-candidaturas")
 public class PreCandidaturaController {
 
     private final PreCandidaturaService preCandidaturaService;
 
-
     public PreCandidaturaController(PreCandidaturaService preCandidaturaService) {
         this.preCandidaturaService = preCandidaturaService;
     }
 
-    // =========================
-    // 1️⃣ INICIAR PRÉ-CANDIDATURA
-    // =========================
     @PostMapping("/{idVaga}")
     public ResponseEntity<?> iniciar(
             @PathVariable Long idVaga,
@@ -31,48 +27,62 @@ public class PreCandidaturaController {
             preCandidaturaService.iniciar(idVaga, email);
 
             return ResponseEntity.status(HttpStatus.CREATED).body(
-              Map.of(
-                      "sucess", true,
-                      "message", "Pré-candidatura iniciada com sucesso."
-              )
+                    Map.of(
+                            "success", true,
+                            "message", "Pré-candidatura iniciada com sucesso."
+                    )
             );
-        } catch (Exception e) {
+        } catch (IllegalArgumentException e) {
+            log.warn("Erro de validação ao iniciar pré-candidatura. vagaId={}, email={}", idVaga, email, e);
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     Map.of(
-                            "sucess", false,
+                            "success", false,
                             "error", e.getMessage()
+                    )
+            );
+        } catch (Exception e) {
+            log.error("Erro interno ao iniciar pré-candidatura. vagaId={}, email={}", idVaga, email, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+                    Map.of(
+                            "success", false,
+                            "error", "Erro interno ao processar a pré-candidatura."
                     )
             );
         }
     }
 
-    // =========================
-    // 2️⃣ VALIDAR TOKEN (FRONT)
-    // =========================
     @GetMapping("/validar")
-    public ResponseEntity<?> validarToken(
-            @RequestParam String token
-    ) {
+    public ResponseEntity<?> validarToken(@RequestParam String token) {
         try {
-            PreCandidatura pre = preCandidaturaService.validarToken(token);
+            var pre = preCandidaturaService.validarToken(token);
 
             return ResponseEntity.ok(
                     Map.of(
+                            "success", true,
                             "email", pre.getEmail(),
                             "vagaId", pre.getVaga().getIdVaga(),
                             "status", pre.getStatusPreCandidatura().name()
                     )
             );
+        } catch (IllegalArgumentException e) {
+            log.warn("Erro de validação ao validar token. token={}", token, e);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                    Map.of(
+                            "success", false,
+                            "error", e.getMessage()
+                    )
+            );
         } catch (Exception e) {
-            // Retorna um erro 400 com mensagem de erro
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("sucess", false, "error", e.getMessage()));
+            log.error("Erro interno ao validar token. token={}", token, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+                    Map.of(
+                            "success", false,
+                            "error", "Erro interno ao validar token."
+                    )
+            );
         }
     }
 
-    // =========================
-    // 3️⃣ CONFIRMAR NA TELA
-    // =========================
     @PostMapping("/confirmar")
     public ResponseEntity<?> confirmar(@RequestParam String token) {
         try {
@@ -84,16 +94,24 @@ public class PreCandidaturaController {
                             "message", "Candidatura confirmada com sucesso."
                     )
             );
-        } catch (Exception e) {
+        } catch (IllegalArgumentException e) {
+            log.warn("Erro de validação ao confirmar pré-candidatura. token={}", token, e);
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                     Map.of(
                             "success", false,
                             "error", e.getMessage()
                     )
             );
+        } catch (Exception e) {
+            log.error("Erro interno ao confirmar pré-candidatura. token={}", token, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+                    Map.of(
+                            "success", false,
+                            "error", "Erro interno ao confirmar pré-candidatura."
+                    )
+            );
         }
     }
 }
-
 
 
