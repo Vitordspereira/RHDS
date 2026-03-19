@@ -1,12 +1,11 @@
 package com.hub.hds.service;
 
 import com.hub.hds.models.vaga.Vaga;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
 import lombok.extern.slf4j.Slf4j;
-import java.util.Set;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.net.URI;
@@ -14,16 +13,20 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.util.Set;
 
 @Slf4j
 @Service
 public class EmailService {
 
-    @Value("${resend.api.key}")
-    private String resendApiKey;
+    @Value("${brevo.api.key}")
+    private String brevoApiKey;
 
-    @Value("${resend.from}")
-    private String resendFrom;
+    @Value("${brevo.sender.name}")
+    private String senderName;
+
+    @Value("${brevo.sender.email}")
+    private String senderEmail;
 
     private final HttpClient httpClient = HttpClient.newHttpClient();
 
@@ -32,32 +35,41 @@ public class EmailService {
             throw new IllegalArgumentException("E-mail de destino não informado.");
         }
 
-        if (resendFrom == null || resendFrom.isBlank()) {
-            throw new IllegalStateException("Remetente de e-mail não configurado.");
+        if (brevoApiKey == null || brevoApiKey.isBlank()) {
+            throw new IllegalStateException("Chave da Brevo não configurada.");
         }
 
-        if (resendApiKey == null || resendApiKey.isBlank()) {
-            throw new IllegalStateException("Chave da Resend não configurada.");
+        if (senderEmail == null || senderEmail.isBlank()) {
+            throw new IllegalStateException("E-mail do remetente não configurado.");
         }
 
         try {
             String json = """
                     {
-                      "from": "%s",
-                      "to": ["%s"],
+                      "sender": {
+                        "name": "%s",
+                        "email": "%s"
+                      },
+                      "to": [
+                        {
+                          "email": "%s"
+                        }
+                      ],
                       "subject": "%s",
-                      "html": %s
+                      "htmlContent": %s
                     }
                     """.formatted(
-                    escapeJson(resendFrom),
+                    escapeJson(senderName),
+                    escapeJson(senderEmail),
                     escapeJson(para),
                     escapeJson(assunto),
                     toJsonString(html)
             );
 
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create("https://api.resend.com/emails"))
-                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + resendApiKey)
+                    .uri(URI.create("https://api.brevo.com/v3/smtp/email"))
+                    .header("accept", "application/json")
+                    .header("api-key", brevoApiKey)
                     .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                     .POST(HttpRequest.BodyPublishers.ofString(json, StandardCharsets.UTF_8))
                     .build();
@@ -65,11 +77,11 @@ public class EmailService {
             HttpResponse<String> response =
                     httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
-            log.info("Resend status: {}", response.statusCode());
-            log.info("Resend body: {}", response.body());
+            log.info("Brevo status: {}", response.statusCode());
+            log.info("Brevo body: {}", response.body());
 
             if (response.statusCode() < 200 || response.statusCode() >= 300) {
-                throw new RuntimeException("Falha ao enviar e-mail via Resend: " + response.body());
+                throw new RuntimeException("Falha ao enviar e-mail via Brevo: " + response.body());
             }
 
             log.info("E-mail enviado com sucesso para {}", para);
