@@ -29,7 +29,20 @@ public interface VagaRepository extends JpaRepository<Vaga, Long> {
 
     List<Vaga> findByCategoriaVaga(CategoriaVaga categoriaVaga);
 
-    List<Vaga> findByRecrutador_IdRecrutadorOrderByCreatedAtDesc(Long idRecrutador);
 
     List<Vaga> findByEmpresa_IdEmpresaOrderByCreatedAtDesc(Long idEmpresa);
+
+    @Query("""
+    SELECT v
+    FROM Vaga v
+    WHERE v.statusVaga = com.hub.hds.models.vaga.StatusVaga.ABERTA
+      AND NOT EXISTS (
+          SELECT c
+          FROM Candidatura c
+          WHERE c.vaga.idVaga = v.idVaga
+            AND c.candidato.idCandidato = :idCandidato
+      )
+    ORDER BY v.createdAt DESC
+""")
+    List<Vaga> listarVagasDisponiveisParaCandidato(@Param("idCandidato") Long idCandidato);
 }

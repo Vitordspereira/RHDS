@@ -324,4 +324,12 @@ public class VagaService {
             vaga.getCnhs().add(c);
         }
     }
+
+    @Transactional(readOnly = true)
+    public List<VagaListDTO> listarDisponiveisParaCandidato(Long idCandidato) {
+        return vagaRepository.listarVagasDisponiveisParaCandidato(idCandidato)
+                .stream()
+                .map(this::attachInteressadosAndMap)
+                .toList();
+    }
 }

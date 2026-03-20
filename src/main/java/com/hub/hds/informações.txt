@@ -1,0 +1,3 @@
+- preciso arrumar o esqueci senha caique mandou a url da página no grupo
+
+- preciso dar truncate no banco de dados do RHDS
