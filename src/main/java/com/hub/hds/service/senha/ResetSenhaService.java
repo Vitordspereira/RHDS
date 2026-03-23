@@ -11,6 +11,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
@@ -22,7 +24,6 @@ public class ResetSenhaService {
     private final ResetSenhaRepository resetSenhaRepository;
     private final EmailService emailService;
     private final PasswordEncoder passwordEncoder;
-
 
     @Value("${app.frontend.reset-senha-url}")
     private String resetSenhaUrl;
@@ -39,12 +40,11 @@ public class ResetSenhaService {
         this.passwordEncoder = passwordEncoder;
     }
 
-    // 1️⃣ Solicitar reset de senha
     public void solicitarReset(String email) {
 
         Optional<Usuario> usuarioOpt = usuarioRepository.findByEmail(email);
         if (usuarioOpt.isEmpty()) {
-            return; // segurança: não revelar se existe ou não
+            return;
         }
 
         Usuario usuario = usuarioOpt.get();
@@ -60,16 +60,26 @@ public class ResetSenhaService {
 
         resetSenhaRepository.save(reset);
 
-        String link = resetSenhaUrl + "?token=" +token;
+        String link = resetSenhaUrl + "?token=" + URLEncoder.encode(token, StandardCharsets.UTF_8);
+
+        String html = """
+                <html>
+                    <body>
+                        <p>Clique no link abaixo para redefinir sua senha:</p>
+                        <p><a href="%s">Redefinir senha</a></p>
+                        <p>Se o botão não funcionar, copie e cole este link no navegador:</p>
+                        <p>%s</p>
+                    </body>
+                </html>
+                """.formatted(link, link);
 
         emailService.enviarEmail(
                 usuario.getEmail(),
                 "Reset de senha",
-                "Clique no link para redefinir sua senha:\n" + link
+                html
         );
     }
 
-    // 2️⃣ Redefinir senha
     @Transactional
     public void redefinirSenha(ResetSenhaResponse dto) {
 
@@ -92,4 +102,3 @@ public class ResetSenhaService {
         resetSenhaRepository.save(reset);
     }
 }
-
