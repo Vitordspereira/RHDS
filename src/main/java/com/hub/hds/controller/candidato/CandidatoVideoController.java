@@ -19,6 +19,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Map;
 
 
 @RestController
@@ -31,6 +32,9 @@ public class CandidatoVideoController {
 
     @Value("${app.upload.video-dir}")
     private String baseDir;
+
+    @Value("${app.base-url}")
+    private String appBaseUrl;
 
     // Retorna o filename do vídeo salvo para o candidato
     @GetMapping("/{id}/video")
@@ -45,6 +49,26 @@ public class CandidatoVideoController {
 
         // retorna SOMENTE o filename
         return ResponseEntity.ok(c.getVideoApresentacao());
+    }
+
+    @GetMapping("/{id}/video/url")
+    public ResponseEntity<Map<String, String>> getVideoUrl(@PathVariable Long id) {
+
+        Candidato c = candidatoRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Candidato não encontrado"));
+
+        if (c.getVideoApresentacao() == null || c.getVideoApresentacao().isBlank()) {
+            return ResponseEntity.noContent().build();
+        }
+
+        String filename = c.getVideoApresentacao();
+        String base = appBaseUrl.replaceAll("/+$", "");
+        String videoUrl = base + "/videos/" + filename;
+
+        return ResponseEntity.ok(Map.of(
+                "filename", filename,
+                "url", videoUrl
+        ));
     }
 
     // Upload do vídeo (salvamento definitivo)

@@ -1,18 +1,23 @@
 package com.hub.hds.configuracao.video;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
+import java.nio.file.Paths;
+
 @Configuration
 public class StaticResourceConfig implements WebMvcConfigurer {
 
+    @Value("${app.upload.video-dir}")
+    private String videoDir;
+
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
+        String location = Paths.get(videoDir).toAbsolutePath().normalize().toUri().toString();
         registry
                 .addResourceHandler("/videos/**")
-                .addResourceLocations(
-                        "file:C:/Users/user/Desktop/@Vitor - estratégia/projetos/RHDS-Back-End/uploads/videos/"
-                );
+                .addResourceLocations(location);
     }
 }

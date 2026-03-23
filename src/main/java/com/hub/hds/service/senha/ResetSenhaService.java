@@ -67,11 +67,9 @@ public class ResetSenhaService {
                     <body>
                         <p>Clique no link abaixo para redefinir sua senha:</p>
                         <p><a href="%s">Redefinir senha</a></p>
-                        <p>Se o botão não funcionar, copie e cole este link no navegador:</p>
-                        <p>%s</p>
                     </body>
                 </html>
-                """.formatted(link, link);
+                """.formatted(link);
 
         emailService.enviarEmail(
                 usuario.getEmail(),
