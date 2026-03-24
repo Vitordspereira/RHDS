@@ -15,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -51,18 +52,6 @@ public class CandidatoVideoController {
         return ResponseEntity.ok(c.getVideoApresentacao());
     }
 
-    /**
-     * Retorna a URL pública completa do vídeo do candidato.
-     *
-     * Esse endpoint é útil para o front,
-     * porque ele já recebeu a URL pronta para colocar no src do <video>
-     *
-     * Exemplo de retorno:
-     * {
-     *      "filename": "cand_12_abc123.mp4"
-     *      "url": "https://rhds.onrender.com/videos/cand_12_abc123.mp4"
-     * }
-     */
     @GetMapping("/{id}/video/url")
     public ResponseEntity<Map<String, String>> getVideoUrl(@PathVariable Long id) {
 
@@ -75,7 +64,12 @@ public class CandidatoVideoController {
 
         String filename = c.getVideoApresentacao();
         String base = appBaseUrl.replaceAll("/+$", "");
-        String videoUrl = base + "/videos/" + filename;
+
+        String videoUrl = UriComponentsBuilder
+                .fromUriString(base)
+                .path("/candidatos/video/stream/")
+                .path(filename)
+                .toUriString();
 
         return ResponseEntity.ok(Map.of(
                 "filename", filename,
