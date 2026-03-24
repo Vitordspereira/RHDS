@@ -1,6 +1,7 @@
 package com.hub.hds.service.vaga;
 
 import com.hub.hds.AlertaPalavras.KeywordExtractor;
+import com.hub.hds.dto.vaga.enums.SalarioTipoDTO;
 import com.hub.hds.dto.vaga.get.VagaListDTO;
 import com.hub.hds.dto.vaga.post.*;
 import com.hub.hds.dto.vaga.put.VagaUpdateDTO;
@@ -22,6 +23,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.ObjectMapper;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.List;
@@ -213,8 +215,9 @@ public class VagaService {
         vaga.setModalidadeVaga(dto.modalidadeVaga() == null ? null : ModalidadeVaga.valueOf(dto.modalidadeVaga().name()));
         vaga.setTipoContrato(dto.tipoContrato() == null ? null : TipoContrato.valueOf(dto.tipoContrato().name()));
         vaga.setCategoriaVaga(dto.categoriaVaga() == null ? null : CategoriaVaga.valueOf(dto.categoriaVaga().name()));
-        vaga.setSalarioTipo(dto.salarioTipo() == null ? SalarioTipo.COMBINAR : SalarioTipo.valueOf(dto.salarioTipo().name()));
-        vaga.setSalarioValor(dto.salarioValor());
+
+        applySalario(vaga, dto.salarioTipo(), dto.salarioValor());
+
         vaga.setResponsabilidades(vagaMapper.toJson(dto.responsabilidades()));
         vaga.setRequisitosObrigatorios(vagaMapper.toJson(dto.requisitosObrigatorios()));
         vaga.setRequisitosDesejaveis(vagaMapper.toJson(dto.requisitosDesejaveis()));
@@ -242,8 +245,9 @@ public class VagaService {
         vaga.setModalidadeVaga(dto.modalidadeVaga() == null ? null : ModalidadeVaga.valueOf(dto.modalidadeVaga().name()));
         vaga.setTipoContrato(dto.tipoContrato() == null ? null : TipoContrato.valueOf(dto.tipoContrato().name()));
         vaga.setCategoriaVaga(dto.categoriaVaga() == null ? null : CategoriaVaga.valueOf(dto.categoriaVaga().name()));
-        vaga.setSalarioTipo(dto.salarioTipo() == null ? SalarioTipo.COMBINAR : SalarioTipo.valueOf(dto.salarioTipo().name()));
-        vaga.setSalarioValor(dto.salarioValor());
+
+        applySalario(vaga, dto.salarioTipo(), dto.salarioValor());
+
         vaga.setResponsabilidades(vagaMapper.toJson(dto.responsabilidades()));
         vaga.setRequisitosObrigatorios(vagaMapper.toJson(dto.requisitosObrigatorios()));
         vaga.setRequisitosDesejaveis(vagaMapper.toJson(dto.requisitosDesejaveis()));
@@ -331,5 +335,20 @@ public class VagaService {
                 .stream()
                 .map(this::attachInteressadosAndMap)
                 .toList();
+    }
+
+    private void applySalario(Vaga vaga, SalarioTipoDTO salarioTipoDTO, BigDecimal salarioValor) {
+        SalarioTipo salarioTipo = salarioTipoDTO == null
+                ? SalarioTipo.COMBINAR
+                :SalarioTipo.valueOf(salarioTipoDTO.name());
+
+        vaga.setSalarioTipo(salarioTipo);
+
+        if (salarioTipo == SalarioTipo.COMBINAR) {
+            vaga.setSalarioValor(null);
+            return;
+        }
+
+        vaga.setSalarioValor(salarioValor);
     }
 }

@@ -51,6 +51,18 @@ public class CandidatoVideoController {
         return ResponseEntity.ok(c.getVideoApresentacao());
     }
 
+    /**
+     * Retorna a URL pública completa do vídeo do candidato.
+     *
+     * Esse endpoint é útil para o front,
+     * porque ele já recebeu a URL pronta para colocar no src do <video>
+     *
+     * Exemplo de retorno:
+     * {
+     *      "filename": "cand_12_abc123.mp4"
+     *      "url": "https://rhds.onrender.com/videos/cand_12_abc123.mp4"
+     * }
+     */
     @GetMapping("/{id}/video/url")
     public ResponseEntity<Map<String, String>> getVideoUrl(@PathVariable Long id) {
 
